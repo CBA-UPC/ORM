@@ -35,12 +35,14 @@ Lastly, we will make use of [Mysql Workbench](https://www.mysql.com/products/wor
 3) Execute [db_initializer.py](code/db_initializer.py) to store the basic data inside the database.
 
 Usage: db_initializer.py 1 1000
+
 The two parameters specify the range of the most popular websites to include inside the database. 
 To explore more parameters execute "db_initializer --help".
 
 4) Execute [orm.py](code/orm.py) to start parsing websites.
 
 Usage: orm.py -start 0 -end 1000 -t 4
+
 The third parameter tells ORM how many threads to use to parse websites. 
 
 ##Things to note
