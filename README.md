@@ -5,7 +5,7 @@ ORM also tries to automatically unminify/unobfuscate the code of the resources f
 
 ## Setup
 ### Requirements
-We strongly recommend the use of Python 3.7, since lower version may not support the required modules.
+We strongly recommend the use of Python 3.7, since lower versions may not support the required modules.
 The following packages are required:
 * beautifulsoup4 >= 4.8.2
 * geoip2 == 3.0.0
