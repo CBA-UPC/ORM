@@ -45,7 +45,7 @@ Usage: orm.py -start 0 -end 1000 -t 4
 
 The third parameter tells ORM how many threads to use to parse websites. 
 
-##Things to note
+## Things to note
 
 * Each ORM thread opens a number of browser instances equivalent to the number of content-blocker plugins we configure plus one more for the vanilla browser. By default only uBlock Origin is configured so each thread will open two browsers to compare the resources gotten by a clean browser and a protected one. Be careful launching large ammounts of threads as each browser instance can consume a considerable ammount of memory.
 
