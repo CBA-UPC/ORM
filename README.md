@@ -15,6 +15,7 @@ The following packages are required:
 * pyrabin == 0.6
 * requests >= 2.23.0
 * selenium == 3.141.0
+
 You can install them using *pip*.
 
 Moreover, to compute the *fuzzy_hashes* used to compare resources, we need to install tlsh. You can follow the official [guide.](https://github.com/trendmicro/tlsh) For future proof, we include inside [assets](assets/) folder the current version of the module used by ORM.
