@@ -22,10 +22,10 @@ Moreover, to compute the *fuzzy_hashes* used to compare resources, we need to in
 We also need the "abpy" module to compare hte collected URLs with the tracking patterns found in [EasyList](https://easylist.to/easylist/easylist.txt), [EasyPrivacy](https://easylist.to/easylist/easyprivacy.txt) or other similar pattern lists.
 For compatibility reasons we include inside the code folder the module used by ORM.
 
-Regarding the browser, we need a Chromium instance with support for the DevTools Protocol. For compatibility reasons we include the deb packages used to develop the tool [assets/chromium](assets/chromium). For tracking detection we include 3 different plugins: [AdBlock Plus](https://adblockplus.org), [Ghostery](https://www.ghostery.com/) and [uBlock Origin](https://chrome.google.com/webstore/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm?hl=es). Inside "assets/plugins" there are the versions used for our experiments although ORM should be compatible with newer versions. 
+Regarding the browser, we need a Chromium instance with support for the DevTools Protocol. For compatibility reasons we include the deb packages used to develop the tool [assets/chromium](assets/chromium). For tracking detection we include 3 different plugins: [AdBlock Plus](https://adblockplus.org), [Ghostery](https://www.ghostery.com/) and [uBlock Origin](https://chrome.google.com/webstore/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm?hl=es). Inside [assets/plugins](assets/plugins) there are the versions used for our experiments although ORM should be compatible with newer versions. 
 
 
-Lastly, we will make use of [Mysql Workbench](https://www.mysql.com/products/workbench/) to create and maintain the databased used to store the information.
+Lastly, we will make use of [Mysql Workbench](https://www.mysql.com/products/workbench/) to create and maintain the database used to store the information.
 
 ### Installation
 1) Load the database structure included inside [assets/database](assets/database) with MySQL Workbench, then synchronize the model with the server where the data is going to be stored. The default database name is ORM.
