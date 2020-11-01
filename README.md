@@ -55,3 +55,7 @@ The third parameter tells ORM how many threads to use to parse websites.
 * The resource information is stored inside the "resource" table. In the same way, the URLs, domains and code fingerprints are stored inside their own tables. Each table including two nouns joined by an underscore (e.g. "domain_url") states the relation between the two. Accessing the data by means of specific scripts will give the user access to all the information available inside the database.
 
 * The [fingerprinter.py](code/fingerprinter.py) script partitions the downloaded code in unambiguous pieces.
+
+## Authors
+* Ismael Castell-Uroz
+* Pere Barlet-Ros
