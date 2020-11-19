@@ -20,10 +20,10 @@ You can install them using *pip*.
 
 Moreover, to compute the *fuzzy_hashes* used to compare resources, we need to install tlsh. You can follow the official [guide.](https://github.com/trendmicro/tlsh) For future proof, we include inside [assets](assets/) folder the current version of the module used by ORM.
 
-We also need the "abpy" module to compare hte collected URLs with the tracking patterns found in [EasyList](https://easylist.to/easylist/easylist.txt), [EasyPrivacy](https://easylist.to/easylist/easyprivacy.txt) or other similar pattern lists.
+We also need the "abpy" module to compare the collected URLs with the tracking patterns found in [EasyList](https://easylist.to/easylist/easylist.txt), [EasyPrivacy](https://easylist.to/easylist/easyprivacy.txt) or other similar pattern lists.
 For compatibility reasons we include inside the code folder the module used by ORM.
 
-Regarding the browser, we need a Chromium instance with support for the DevTools Protocol. For compatibility reasons we include the deb packages used to develop the tool [assets/chromium](assets/chromium). For tracking detection we include 3 different plugins: [AdBlock Plus](https://adblockplus.org), [Ghostery](https://www.ghostery.com/) and [uBlock Origin](https://chrome.google.com/webstore/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm?hl=es). Inside [assets/plugins](assets/plugins) there are the versions used for our experiments although ORM should be compatible with newer versions. 
+Regarding the browser, we need a Chromium instance with support for the DevTools Protocol. For compatibility reasons we include the deb packages used to develop the tool in [assets/chromium](assets/chromium). For tracking detection we include 3 different plugins: [AdBlock Plus](https://adblockplus.org), [Ghostery](https://www.ghostery.com/) and [uBlock Origin](https://chrome.google.com/webstore/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm?hl=es). Inside [assets/plugins](assets/plugins) there are the versions used for our experiments although ORM should be compatible with newer versions. 
 
 
 Lastly, we will make use of [Mysql Workbench](https://www.mysql.com/products/workbench/) to create and maintain the database used to store the information.
@@ -50,7 +50,7 @@ The third parameter tells ORM how many threads to use to parse websites.
 
 ## Things to note
 
-* Each ORM thread opens a number of browser instances equivalent to the number of content-blocker plugins we configure plus one more for the vanilla browser. By default only uBlock Origin is configured so each thread will open two browsers to compare the resources gotten by a clean browser and a protected one. Be careful launching large ammounts of threads as each browser instance can consume a considerable ammount of memory.
+* Each ORM thread opens a number of browser instances equivalent to the number of content-blocker plugins we configure plus one more for the vanilla browser. By default only uBlock Origin is configured so each thread will open two browsers to compare the resources gotten by a clean browser and a protected one. Be careful launching large ammounts of threads as each browser instance can consume a considerable amount of memory.
 
 * The resource information is stored inside the "resource" table. In the same way, the URLs, domains and code fingerprints are stored inside their own tables. Each table including two nouns joined by an underscore (e.g. "domain_url") states the relation between the two. Accessing the data by means of specific scripts will give the user access to all the information available inside the database.
 
