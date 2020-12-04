@@ -1,0 +1,9 @@
+beautifulsoup4>=4.8.2
+geoip2==3.0.0
+jsbeautifier>=1.11.0
+lxml>=4.5.0
+mysqlclient>=1.4.6
+pyrabin==0.6
+requests>=2.23.0
+selenium==3.141.0
+tldextract>=2.2.2
