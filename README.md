@@ -15,6 +15,7 @@ The following packages are required:
 * pyrabin == 0.6
 * requests >= 2.23.0
 * selenium == 3.141.0
+* tldextract >= 2.2.2
 
 You can install them using *pip*.
 
