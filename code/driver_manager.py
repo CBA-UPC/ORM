@@ -24,7 +24,6 @@ import logging
 import logging.config
 
 # 3rd party modules
-from setproctitle import setproctitle
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.common.exceptions import UnexpectedAlertPresentException, InvalidSessionIdException
@@ -120,7 +119,6 @@ def visit_site(db, process, driver, domain, plugin, temp_folder, cache):
     """ Loads the website and extract its information. """
 
     # Load the website and wait some time inside it
-    setproctitle(domain.values["name"])
     try:
         driver.get('http://' + domain.values["name"])
     except TimeoutException:
