@@ -27,7 +27,7 @@ import logging.config
 from setproctitle import setproctitle
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException
-from selenium.common.exceptions import UnexpectedAlertPresentException
+from selenium.common.exceptions import UnexpectedAlertPresentException, InvalidSessionIdException
 
 # Own modules
 import config
@@ -100,6 +100,12 @@ def reset_browser(driver, process, plugin, cache):
             while not driver:
                 driver = build_driver(plugin, cache, process)
             driver.set_page_load_timeout(30)
+    except InvalidSessionIdException as e:
+        logger.error("(proc. %d) Error #6: %s" % (process, str(e)))
+        driver = build_driver(plugin, cache, process)
+        while not driver:
+            driver = build_driver(plugin, cache, process)
+        driver.set_page_load_timeout(30)
     except Exception as e:
         logger.error("(proc. %d) Error #5: %s" % (process, str(e)))
         driver.close()
