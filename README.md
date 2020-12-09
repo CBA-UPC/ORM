@@ -51,7 +51,7 @@ The third parameter tells ORM how many threads to use to parse websites.
 
 ## Things to note
 
-* Each ORM thread opens a number of browser instances equivalent to the number of content-blocker plugins we configure plus one more for the vanilla browser. By default only uBlock Origin is configured so each thread will open two browsers to compare the resources gotten by a clean browser and a protected one. Be careful launching large ammounts of threads as each browser instance can consume a considerable amount of memory.
+* Each ORM thread opens a number of browser instances equivalent to the number of content-blocker plugins we configure plus one more for the vanilla browser. By default only uBlock Origin is configured so each thread will open two browsers to compare the resources gotten by a clean browser and a protected one. Be careful launching large amounts of threads as each browser instance can consume a considerable amount of memory.
 
 * The resource information is stored inside the "resource" table. In the same way, the URLs, domains and code fingerprints are stored inside their own tables. Each table including two nouns joined by an underscore (e.g. "domain_url") states the relation between the two. Accessing the data by means of specific scripts will give the user access to all the information available inside the database.
 
