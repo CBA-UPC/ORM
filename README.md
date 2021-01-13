@@ -1,5 +1,5 @@
 # QoE version of Online Resource Mapper (ORM)
-Simplified ORM to perform QoE experiments using different browser plugins.
+Simplified version of ORM to perform QoE experiments using different browser plugins.
 
 ## Setup
 ### Requirements
