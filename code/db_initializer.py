@@ -48,7 +48,7 @@ def init_plugins():
     plugin.values["custom"] = 1
     plugin.values["url"] = "chrome-extension://cfhdojbkjhnklbpkdaibdccddilifddb/options.html"
     plugin.values["xpath_to_click"] = "//button[@data-action='toggle-remove-subscription']"
-    plugin.values["enabled"] = 0
+    plugin.values["enabled"] = 1
     plugin.save()
 
     # Ghostery
@@ -58,7 +58,7 @@ def init_plugins():
     plugin.values["custom"] = 0
     plugin.values["url"] = None
     plugin.values["xpath_to_click"] = None
-    plugin.values["enabled"] = 0
+    plugin.values["enabled"] = 1
     plugin.save()
 
     # Ublock Origin
@@ -78,99 +78,71 @@ def init_types():
     ctype = Connector(database, "type")
     ctype.load(hash_string("Document"))
     ctype.values["name"] = "Document"
-    ctype.values["download"] = 1
-    ctype.values["beautify"] = 0
     ctype.values["content_list_type"] = "document"
     ctype.save()
 
     ctype.load(hash_string("Script"))
     ctype.values["name"] = "Script"
-    ctype.values["download"] = 1
-    ctype.values["beautify"] = 1
     ctype.values["content_list_type"] = "script"
     ctype.save()
 
     ctype.load(hash_string("Stylesheet"))
     ctype.values["name"] = "Stylesheet"
-    ctype.values["download"] = 0
-    ctype.values["beautify"] = 0
     ctype.values["content_list_type"] = "stylesheet"
     ctype.save()
 
     ctype.load(hash_string("Manifest"))
     ctype.values["name"] = "Manifest"
-    ctype.values["download"] = 0
-    ctype.values["beautify"] = 0
     ctype.values["content_list_type"] = "other"
     ctype.save()
 
     ctype.load(hash_string("XHR"))
     ctype.values["name"] = "XHR"
-    ctype.values["download"] = 0
-    ctype.values["beautify"] = 0
     ctype.values["content_list_type"] = "xmlhttprequest"
     ctype.save()
 
     ctype.load(hash_string("Fetch"))
     ctype.values["name"] = "Fetch"
-    ctype.values["download"] = 0
-    ctype.values["beautify"] = 0
     ctype.values["content_list_type"] = "xmlhttprequest"
     ctype.save()
 
     ctype.load(hash_string("Image"))
     ctype.values["name"] = "Image"
-    ctype.values["download"] = 0
-    ctype.values["beautify"] = 0
     ctype.values["content_list_type"] = "image"
     ctype.save()
 
     ctype.load(hash_string("Media"))
     ctype.values["name"] = "Media"
-    ctype.values["download"] = 0
-    ctype.values["beautify"] = 0
     ctype.values["content_list_type"] = "media"
     ctype.save()
 
     ctype.load(hash_string("Font"))
     ctype.values["name"] = "Font"
-    ctype.values["download"] = 0
-    ctype.values["beautify"] = 0
     ctype.values["content_list_type"] = "font"
     ctype.save()
 
     ctype.load(hash_string("WebRTC"))
     ctype.values["name"] = "WebRTC"
-    ctype.values["download"] = 0
-    ctype.values["beautify"] = 0
     ctype.values["content_list_type"] = "webrtc"
     ctype.save()
 
     ctype.load(hash_string("WebSocket"))
     ctype.values["name"] = "WebSocket"
-    ctype.values["download"] = 0
-    ctype.values["beautify"] = 0
     ctype.values["content_list_type"] = "websocket"
     ctype.save()
 
     ctype.load(hash_string("TextTrack"))
     ctype.values["name"] = "TextTrack"
-    ctype.values["download"] = 0
-    ctype.values["beautify"] = 0
     ctype.values["content_list_type"] = "object"
     ctype.save()
 
     ctype.load(hash_string("EventSource"))
     ctype.values["name"] = "EventSource"
-    ctype.values["download"] = 0
-    ctype.values["beautify"] = 0
     ctype.values["content_list_type"] = "other"
     ctype.save()
 
     ctype.load(hash_string("Other"))
     ctype.values["name"] = "Other"
-    ctype.values["download"] = 0
-    ctype.values["beautify"] = 0
     ctype.values["content_list_type"] = "other"
     ctype.save()
 

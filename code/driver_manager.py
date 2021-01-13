@@ -146,9 +146,9 @@ def visit_site(db, process, driver, domain, plugin, temp_folder, cache):
 
     # Process traffic dictionary
     for key in network_traffic.keys():
-        manage_request(db, process, domain, network_traffic[key], plugin, temp_folder)
+        manage_request(db, domain, network_traffic[key], plugin)
         for sub_key in network_traffic[key]["requests"].keys():
-            manage_request(db, process, domain, network_traffic[key]["requests"][sub_key], plugin, temp_folder)
+            manage_request(db, domain, network_traffic[key]["requests"][sub_key], plugin)
 
     driver = reset_browser(driver, process, plugin, cache)
     return driver, False

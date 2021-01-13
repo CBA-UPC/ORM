@@ -41,7 +41,7 @@ Usage: db_initializer.py 0 1000
 The two parameters specify the range of the most popular websites to include inside the database. 
 To explore more parameters execute "db_initializer --help".
 
-4) Execute [orm.py](code/orm.py) to start parsing websites.
+4) Execute [orm.py](code/ORM-QoE.py) to start parsing websites.
 
 Usage: orm.py -start 0 -end 1000 -t 4
 
