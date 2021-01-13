@@ -24,8 +24,6 @@ from urllib.parse import urlparse
 import config
 
 import tldextract
-from geoip2 import database
-from geoip2.errors import AddressNotFoundError
 
 import requests
 from hashlib import sha256
@@ -85,29 +83,6 @@ def extract_components(url):
                   'query': parsed.query, 'fragment': parsed.fragment, 'username': parsed.username,
                   'password': parsed.password, 'hostname': parsed.hostname, 'port': parsed.port}
     return components
-
-
-def extract_location(address, reader=None):
-    """ Extract country from URL. """
-
-    location = {'continent_code': None, 'country_code': None, 'is_EU': 0, 'city': None,
-                'latitude': 0, 'longitude': 0, 'accuracy_radius': 0}
-    if address:
-        if not reader:
-            reader = database.Reader(config.CITY_FILE_PATH)
-        try:
-            response = reader.city(address)
-        except AddressNotFoundError:
-            pass
-        else:
-            location['continent_code'] = response.continent.code
-            location['country_code'] = response.country.iso_code
-            location['is_EU'] = response.country.is_in_european_union
-            location['city'] = response.city.name
-            location['latitude'] = response.location.latitude
-            location['longitude'] = response.location.longitude
-            location['accuracy_radius'] = response.location.accuracy_radius
-    return location
 
 
 def download_file(url, destination, headers=None, verify=True):

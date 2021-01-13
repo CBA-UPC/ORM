@@ -32,7 +32,7 @@ import requests
 # Own modules
 from db_manager import Db, Connector
 from utils import download_file, hash_file, lsh_file, hash_string, utc_now
-from utils import extract_location, extract_components, extract_domain, clean_subdomain
+from utils import extract_components, extract_domain, clean_subdomain
 
 logging.config.fileConfig('../logging.conf')
 
