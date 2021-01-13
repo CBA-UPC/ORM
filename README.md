@@ -15,6 +15,8 @@ The following packages are required:
 
 You can install them using *pip*.
 
+We need also the LTS version of node.js to run Google's LightHouse. Depending on the platform the installation procedure differs so we recommend to look for specific instructions for your OS. Once you have it run "npm install -g lighthouse" to install it.
+
 Regarding the browser, we need a Chromium instance with support for the DevTools Protocol. For compatibility reasons we include the deb packages used to perform the experiments in [assets/chromium](assets/chromium). For tracking detection we include 3 different plugins: [AdBlock Plus](https://adblockplus.org), [Ghostery](https://www.ghostery.com/) and [uBlock Origin](https://chrome.google.com/webstore/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm?hl=es). Inside [assets/plugins](assets/plugins) there are the versions used for our experiments although ORM should be compatible with newer versions. 
 
 
