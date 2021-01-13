@@ -44,7 +44,7 @@ def init_plugins():
     # AdBlock Plus
     plugin.load(hash_string('AdBlock Plus'))
     plugin.values["name"] = "AdBlock Plus"
-    plugin.values["path"] = "../assets/plugin/adblock_plus/3.5.2_0.crx"
+    plugin.values["path"] = "../assets/plugin/adblock_plus/3.10.1.crx"
     plugin.values["custom"] = 1
     plugin.values["url"] = "chrome-extension://cfhdojbkjhnklbpkdaibdccddilifddb/options.html"
     plugin.values["xpath_to_click"] = "//button[@data-action='toggle-remove-subscription']"
@@ -54,7 +54,7 @@ def init_plugins():
     # Ghostery
     plugin.load(hash_string('Ghostery'))
     plugin.values["name"] = "Ghostery"
-    plugin.values["path"] = "../assets/plugin/ghostery/8.4.0_0.crx"
+    plugin.values["path"] = "../assets/plugin/ghostery/8.5.4.crx"
     plugin.values["custom"] = 0
     plugin.values["url"] = None
     plugin.values["xpath_to_click"] = None
@@ -64,7 +64,7 @@ def init_plugins():
     # Ublock Origin
     plugin.load(hash_string('Ublock Origin'))
     plugin.values["name"] = "Ublock Origin"
-    plugin.values["path"] = "../assets/plugin/ublock_origin/1.19.6_0.crx"
+    plugin.values["path"] = "../assets/plugin/ublock_origin/1.32.4.crx"
     plugin.values["custom"] = 1
     plugin.values["url"] = "chrome-extension://iifehfkdbojjjlccddcaadcadlgkljjm/dashboard.html#3p-filters.html"
     plugin.values["xpath_to_click"] = "//button[@id='buttonUpdate']"

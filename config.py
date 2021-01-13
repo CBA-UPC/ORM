@@ -10,10 +10,10 @@ ALEXA_FILE_PATH = join(PROJECT_DIR, './assets/alexa/top-1m.csv.zip')
 CLEANER_PLUGIN_PATH = join(PROJECT_DIR, 'assets/plugin/cache_killer/cache_killer_1_0_14_6.crx')
 
 
-MYSQL_HOST = 'XXXdatabaseXXX'
-MYSQL_DB = 'ORM'
-MYSQL_USER = 'XXXuserXXX'
-MYSQL_PASSWORD = 'XXXpasswordXXX'
+MYSQL_HOST = 'mysql-server'
+MYSQL_DB = 'ORM_QoE'
+MYSQL_USER = 'script'
+MYSQL_PASSWORD = 'nonrelatedpassword'
 
 
 def load_csv(filename, column):
