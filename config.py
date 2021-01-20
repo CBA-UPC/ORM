@@ -7,7 +7,7 @@ from os.path import abspath, dirname, join, splitext
 PROJECT_DIR = abspath(dirname(__file__))
 
 ALEXA_FILE_PATH = join(PROJECT_DIR, './assets/alexa/top-1m.csv.zip')
-CLEANER_PLUGIN_PATH = join(PROJECT_DIR, 'assets/plugin/cache_killer/cache_killer_1_0_14_6.crx')
+CLEANER_PLUGIN_PATH = join(PROJECT_DIR, 'assets/plugin/cache_killer/2.2.crx')
 
 
 MYSQL_HOST = 'mysql-server'

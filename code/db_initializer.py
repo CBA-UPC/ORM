@@ -38,6 +38,7 @@ def init_plugins():
     plugin.values["custom"] = 0
     plugin.values["url"] = None
     plugin.values["xpath_to_click"] = None
+    plugin.values["port"] = 1000
     plugin.values["enabled"] = 1
     plugin.save()
 
@@ -48,6 +49,7 @@ def init_plugins():
     plugin.values["custom"] = 1
     plugin.values["url"] = "chrome-extension://cfhdojbkjhnklbpkdaibdccddilifddb/options.html"
     plugin.values["xpath_to_click"] = "//button[@data-action='toggle-remove-subscription']"
+    plugin.values["port"] = 1002
     plugin.values["enabled"] = 1
     plugin.save()
 
@@ -58,6 +60,7 @@ def init_plugins():
     plugin.values["custom"] = 0
     plugin.values["url"] = None
     plugin.values["xpath_to_click"] = None
+    plugin.values["port"] = 1004
     plugin.values["enabled"] = 1
     plugin.save()
 
@@ -66,14 +69,15 @@ def init_plugins():
     plugin.values["name"] = "Ublock Origin"
     plugin.values["path"] = "../assets/plugin/ublock_origin/1.32.4.crx"
     plugin.values["custom"] = 1
-    plugin.values["url"] = "chrome-extension://iifehfkdbojjjlccddcaadcadlgkljjm/dashboard.html#3p-filters.html"
+    plugin.values["url"] = "chrome-extension://cjpalhdlnbpafiamejdnhcphjbkeiagm/3p-filters.html"
     plugin.values["xpath_to_click"] = "//button[@id='buttonUpdate']"
+    plugin.values["port"] = 1006
     plugin.values["enabled"] = 1
     plugin.save()
 
 
 def init_types():
-    """ Initializes the default types to download """
+    """ Initializes the default types """
 
     ctype = Connector(database, "type")
     ctype.load(hash_string("Document"))

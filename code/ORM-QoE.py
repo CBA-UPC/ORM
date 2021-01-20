@@ -42,6 +42,7 @@ parser.add_argument('-start', dest='start', type=int, default=0, help='Start ind
 parser.add_argument('-end', dest='end', type=int, default=-1, help='End index (Default: Last)', nargs='?')
 parser.add_argument('-t', dest='threads', type=int, default=0,
                     help='Number of threads/processes to span (Default: Auto)')
+parser.add_argument('-r', dest='repetitions', type=int, default=5, help='Performance check repetitions (Default: 5)')
 parser.add_argument('-v', dest='verbose', type=int, default=3,
                     help='Verbose: 0=CRITICAL; 1=ERROR; 2=WARNING; 3=INFO; 4=DEBUG (Default: WARNING)')
 parser.add_argument('-d', dest='tmp', type=str, default='tmp',
@@ -68,11 +69,11 @@ def main(process):
     # Load the selenium driver with proper plugins
     driver_list = []
     for plugin in plugin_list:
-        driver = build_driver(plugin, cache, process)
+        driver, port = build_driver(plugin, cache, process)
         while not driver:
-            driver = build_driver(plugin, cache, process)
+            driver, port = build_driver(plugin, cache, process)
         driver.set_page_load_timeout(30)
-        driver_list.append([driver, plugin])
+        driver_list.append([driver, port, plugin])
 
     if not driver_list:
         return 1
@@ -103,19 +104,9 @@ def main(process):
             if present and no_update:
                 continue
             logger.info('Job [%d/%d] %s (proc: %d)' % (total - current, total, domain.values["name"], process))
-            for driver in driver_list:
-                url_property = {"plugin_id": driver[1].values['id']}
-                urls = domain.get("url", order="url_id", args=url_property)
-                for url in urls:
-                    domain.remove(url)
-                driver[0], failed = visit_site(db, process, driver[0], domain, driver[1], temp_folder, cache)
-                # Clean the domain results if crawl failed
-                if failed:
-                    urls = domain.get("url", order="url_id", args=url_property)
-                    for url in urls:
-                        domain.remove(url)
-                    break
-            # TODO: Clean the urls/resources that are not used by any domain anymore.
+            for i in range(repetitions):
+                for driver in driver_list:
+                    driver[0] = visit_site(db, process, driver[0], driver[1], domain, driver[2], temp_folder, cache)
             # work_queue.task_done()
     db.close()
     for driver in driver_list:
@@ -131,6 +122,7 @@ if __name__ == '__main__':
     cache = args.cache
     no_update = args.no_update
     threads = args.threads
+    repetitions = args.repetitions
     temp_folder = os.path.join(os.path.abspath("."), args.tmp)
     v = args.verbose
     if verbose[str(v)]:
