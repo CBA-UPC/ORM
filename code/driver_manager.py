@@ -45,7 +45,7 @@ def build_driver(plugin, cache, process):
 
     try:
         chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_argument('--headless')
+        # chrome_options.add_argument('--headless')
         # Clean cache/cookies if not specified to maintain
         if not cache:
             chrome_options.add_argument('--media-cache-size=0')
