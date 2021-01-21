@@ -45,6 +45,7 @@ def build_driver(plugin, cache, process):
 
     try:
         chrome_options = webdriver.ChromeOptions()
+        chrome_options.add_argument('--headless')
         # Clean cache/cookies if not specified to maintain
         if not cache:
             chrome_options.add_argument('--media-cache-size=0')
@@ -86,7 +87,7 @@ def build_driver(plugin, cache, process):
         if plugin.values["name"] != "Vanilla" and plugin.values['custom']:
             time.sleep(3)
             driver.get(plugin.values['url'])
-            time.sleep(3)
+            time.sleep(10)
             try:
                 driver.find_element_by_xpath(plugin.values['xpath_to_click']).click()
             except NoSuchElementException as e:

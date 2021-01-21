@@ -114,7 +114,7 @@ class Db(object):
             # domain = extract_domain(domain)
             print(str(i) + ": " + domain)
             hash_key = hash_string(domain)
-            element = {"hash": hash_key, "name": domain, "rank": i, "insert_date": timestamp}
+            element = {"hash": hash_key, "name": domain, "position": i, "insert_date": timestamp}
             element_id = self.custom(query="SELECT id FROM domain WHERE domain.hash = %s", values=[hash_key])
             if not element_id:
                 self.insert("domain", element)

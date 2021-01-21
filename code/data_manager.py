@@ -237,10 +237,10 @@ def get_performance(db, domain, plugin, log, trace):
     qoe.values["errors_in_console"] = len(log["audits"]["errors-in-console"]["details"]["items"])
     qoe.values["inspector_issues"] = len(log["audits"]["inspector-issues"]["details"]["items"])
     # Compress the code
-    compressed_perf_log = zlib.compress(str(trace).encode("utf-8"))
-    compressed_lh_log = zlib.compress(str(log).encode("utf-8"))
-    qoe.values["performance_log"] = compressed_perf_log
-    qoe.values["lighthouse_log"] = compressed_lh_log
+#    compressed_perf_log = zlib.compress(str(trace).encode("utf-8"))
+#    compressed_lh_log = zlib.compress(str(log).encode("utf-8"))
+#    qoe.values["performance_log"] = compressed_perf_log
+#    qoe.values["lighthouse_log"] = compressed_lh_log
     qoe.values["insert_date"] = t
     qoe.values["update_timestamp"] = t
     return qoe.save()
