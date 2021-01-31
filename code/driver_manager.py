@@ -65,6 +65,7 @@ def build_driver(plugin, cache, process):
             profile.set_preference("network.http.use-cache", False)
 
         driver = webdriver.Firefox(profile)
+        driver.set_page_load_timeout(60)
     except Exception as e:
         # logger.error(e)
         logger.error("(proc. %d) Error creating driver: %s" % (process, str(e)))
@@ -104,7 +105,7 @@ def reset_browser(driver, process, plugin, cache):
     driver = build_driver(plugin, cache, process)
     while not driver:
         driver = build_driver(plugin, cache, process)
-    driver.set_page_load_timeout(30)
+    driver.set_page_load_timeout(60)
     return driver
 
 
