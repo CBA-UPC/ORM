@@ -306,16 +306,14 @@ def main(process):
             ast_data = {"subtrees": [], "ongoing": [], "offset": [], "length": []}
             resource = Connector(db, "resource")
             resource.load(resource_id)
-            rtype = Connector(db, "type")
-            rtype.load(resource.values["type"])
             code = zlib.decompress(resource.values["file"])
             failed = False
-            if rtype.values["name"] == "Document":
+            if resource.values["type"] == "frame":
                 if not extract_scripts(code, ast_data):
                     if not extract_ast(code, ast_data):
                         failed = True
                         logger.error('Could not compute AST for %s (proc %d)' % (resource.values["hash"], process))
-            else:
+            elif resource.values["type"] == "script":
                 if not extract_ast(code, ast_data):
                     if not extract_scripts(code, ast_data):
                         failed = True

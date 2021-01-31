@@ -1,4 +1,4 @@
-'''
+"""
  *
  * Copyright (C) 2020 Universitat Politècnica de Catalunya.
  *
@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
-'''
+"""
 
 # -*- coding: utf-8 -*-
 
@@ -62,7 +62,7 @@ and then call the 'get_all' function to get all the domains. The results are
 returned as a list of Connectors representing the given data.
 
 This way of management simplifies a lot the database requests needed inside the
-code but clearly overgenerates requests. For the sake of speed and performance
+code but clearly over-generates requests. For the sake of speed and performance
 there are some other specific requests included in the Connector to get some
 extensive data that will slow the loading a lot using only the simple methods.
 
@@ -83,8 +83,7 @@ from utils import hash_string
 logging.config.fileConfig('../logging.conf')
 logger = logging.getLogger("DB_MANAGER")
 
-CROSS_TABLES = ["domain_subdomain", "domain_category", "domain_third_party", "domain_url",
-                "pattern_url", "resource_fingerprint"]
+CROSS_TABLES = ["domain_url", "resource_fingerprint", "resource_codeset"]
 
 
 class Db(object):
@@ -114,7 +113,7 @@ class Db(object):
             # domain = extract_domain(domain)
             print(str(i) + ": " + domain)
             hash_key = hash_string(domain)
-            element = {"hash": hash_key, "name": domain, "rank": i, "insert_date": timestamp}
+            element = {"hash": hash_key, "name": domain, "alexa_rank": i, "insert_date": timestamp}
             element_id = self.custom(query="SELECT id FROM domain WHERE domain.hash = %s", values=[hash_key])
             if not element_id:
                 self.insert("domain", element)
@@ -339,7 +338,7 @@ class Db(object):
         except MySQLdb.Error as error:
             logger.error("SQL ERROR: " + str(error) + "\n-----------------")
         else:
-            self.conn.commit()
+            #self.conn.commit()
             for row in cursor.fetchall():
                 result = {}
                 for key in row.keys():

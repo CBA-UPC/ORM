@@ -148,30 +148,17 @@ def main(process):
             resource = Connector(db, "resource")
             resource.load(resource_id)
             logger.info('Job [%d/%d] %s (proc: %d)' % (total - current + 1, total, resource.values["hash"], process))
-            request = "SELECT DISTINCT url_id FROM domain_url WHERE resource_id = %d ORDER BY url_id" % resource_id
-            res = db.custom(request)
 
-            # Get url type (same resource in different urls can have different types so we get the most common type)
-            type_id = 0
-            type_reps = 0
-            type_dict = {}
+            # Get url headers to pass to Beautiful Soup
             url_headers = None
+            request = "SELECT id FROM url WHERE resource_id = %d AND response_headers IS NOT NULL LIMIT 1" % resource_id
+            res = db.custom(request)
             for r in res:
                 url = Connector(db, "url")
-                url.load(r["url_id"])
-                if not url_headers:
-                    url_headers = literal_eval(url.values["headers"])
-                t = str(url.values["type"])
-                if t not in type_dict.keys():
-                    type_dict[t] = 1
-                else:
-                    type_dict[t] += 1
-                if type_dict[t] > type_reps:
-                    type_reps = type_dict[t]
-                    type_id = url.values["type"]
-            rtype = Connector(db, "type")
-            rtype.load(type_id)
-            if rtype.values["name"] == "Document":
+                url.load(r["id"])
+                url_headers = literal_eval(url.values["response_headers"])
+
+            if resource.values["type"] == "frame":
                 extract_scripts(process, resource, temp_folder, url_headers)
             else:
                 code = zlib.decompress(resource.values["file"])
