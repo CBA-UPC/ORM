@@ -167,7 +167,7 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                         seconds -= 1
                         time.sleep(1)
                 db.call("ComputeResourceType", values=[resource.values["id"]])
-                db.call("ComputeResourcePopularityLevel", values=[resource.values["id"]])
+                #db.call("ComputeResourcePopularityLevel", values=[resource.values["id"]])
 
         # json.dump(elem, sys.stdout, indent=2, ensure_ascii=False)
         initiator_id = None
