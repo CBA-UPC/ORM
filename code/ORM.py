@@ -21,9 +21,10 @@
 # Basic modules
 import argparse
 import os
+import time
 import logging.config
 import queue
-from multiprocessing import Pool, Queue, cpu_count, Lock
+from multiprocessing import Pool, Queue, cpu_count, Lock, Process
 
 # Own modules
 from db_manager import Db, Connector
@@ -109,13 +110,13 @@ def main(process):
                 for url in urls:
                     domain.remove(url)
                 # Launch the crawl
-                driver[0], failed, repeat = visit_site(db, process, driver[0], domain,
-                                                       driver[1], temp_folder, cache, geo_db)
+                driver[0], completed, repeat = visit_site(db, process, driver[0], domain,
+                                                          driver[1], temp_folder, cache, geo_db)
                 extra_tries = 2
-                while extra_tries > 0 and failed and repeat:
+                while extra_tries > 0 and not completed and repeat:
                     extra_tries -= 1
-                    driver[0], failed, repeat = visit_site(db, process, driver[0], domain,
-                                                           driver[1], temp_folder, cache, geo_db)
+                    driver[0], completed, repeat = visit_site(db, process, driver[0], domain,
+                                                              driver[1], temp_folder, cache, geo_db)
     db.close()
     for driver in driver_list:
         driver[0].close()
@@ -132,6 +133,7 @@ if __name__ == '__main__':
     threads = args.threads
     temp_folder = os.path.join(os.path.abspath("."), args.tmp)
     v = args.verbose
+    os.makedirs(os.path.join(os.path.abspath("."), "log"), exist_ok=True)
     if verbose[str(v)]:
         logger.setLevel(verbose[str(v)])
 
@@ -175,11 +177,37 @@ if __name__ == '__main__':
     logger.info("Enqueuing work")
     work_queue = Queue()
     queue_lock = Lock()
+    process_list = []
     for result in results:
         work_queue.put(result["id"])
     database.close()
 
     # Create and call the workers
     logger.info("Opening workers")
-    with Pool(processes=threads) as pool:
-        pool.map(main, [i for i in range(threads)])
+    for i in range(threads):
+        p = Process(target=main, args=(i,))
+        p.start()
+        process_list.append(p)
+
+    finished = False
+    while not finished:
+        restored = 0
+        for i in range(len(process_list)):
+            p = process_list[i]
+            if not p.is_alive():
+                queue_lock.acquire()
+                remaining = work_queue.qsize()
+                queue_lock.release()
+                if remaining:
+                    p.kill()
+                    p = Process(target=main, args=(i,))
+                    process_list[i] = p
+                    restored += 1
+                else:
+                    finished = True
+        if restored:
+            logger.info("Restored %d processes (main process)" % restored)
+        time.sleep(60)
+
+    #with Pool(processes=threads) as pool:
+    #    pool.map(main, [i for i in range(threads)])

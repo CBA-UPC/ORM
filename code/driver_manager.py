@@ -29,15 +29,14 @@ import logging.config
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException
 from selenium.common.exceptions import NoSuchWindowException
-from selenium.common.exceptions import UnexpectedAlertPresentException, InvalidSessionIdException
 
 # Own modules
 import config
 from data_manager import manage_requests
 from session_storage import SessionStorage
 
-FAILED = REPEAT = True
-COMPLETE = NO_REPEAT = False
+COMPLETED = REPEAT = True
+FAILED = NO_REPEAT = False
 
 logging.config.fileConfig('../logging.conf')
 
@@ -76,7 +75,7 @@ def build_driver(plugin, cache, process):
     except Exception as e:
         # logger.error(e)
         logger.error("(proc. %d) Error creating driver: %s" % (process, str(e)))
-        return 0
+        return FAILED
     try:
         time.sleep(2)
         # Load received plugin (except for vanilla)
@@ -102,7 +101,7 @@ def build_driver(plugin, cache, process):
         driver.quit()
         # logger.error(e)
         logger.error("(proc. %d) Error creating driver: %s" % (process, str(e)))
-        return 0
+        return FAILED
 
 
 def reset_browser(driver, process, plugin, cache):
@@ -176,4 +175,4 @@ def visit_site(db, process, driver, domain, plugin, temp_folder, cache, geo_db):
         # Insert data and clear storage before opening the next website
         manage_requests(db, process, domain, web_list, plugin, temp_folder, geo_db)
         storage.clear()
-    return driver, COMPLETE, NO_REPEAT
+    return driver, COMPLETED, NO_REPEAT
