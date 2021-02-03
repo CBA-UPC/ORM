@@ -141,6 +141,9 @@ def visit_site(db, process, driver, domain, plugin, temp_folder, cache, geo_db):
         except NoSuchWindowException as e:
             logger.error("(proc. %d) Error accessing the session storage: %s" % (process, str(e)))
             driver = reset_browser(driver, process, plugin, cache)
+        except WebDriverException as e:
+            driver = reset_browser(driver, process, plugin, cache)
+            logger.error("(proc. %d) Error clearing session storage: %s" % (process, str(e)))
         return driver, FAILED, NO_REPEAT
     except WebDriverException as e:
         logger.warning("WebDriverException (2) on %s / Error: %s (proc. %d)" % (domain.values["name"], str(e), process))
@@ -174,5 +177,10 @@ def visit_site(db, process, driver, domain, plugin, temp_folder, cache, geo_db):
     else:
         # Insert data and clear storage before opening the next website
         manage_requests(db, process, domain, web_list, plugin, temp_folder, geo_db)
-        storage.clear()
+        try:
+            storage.clear()
+        except WebDriverException as e:
+            driver = reset_browser(driver, process, plugin, cache)
+            logger.error("(proc. %d) Error clearing session storage: %s" % (process, str(e)))
+            return driver, FAILED, NO_REPEAT
     return driver, COMPLETED, NO_REPEAT

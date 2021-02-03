@@ -183,31 +183,5 @@ if __name__ == '__main__':
     database.close()
 
     # Create and call the workers
-    logger.info("Opening workers")
-    for i in range(threads):
-        p = Process(target=main, args=(i,))
-        p.start()
-        process_list.append(p)
-
-    finished = False
-    while not finished:
-        restored = 0
-        for i in range(len(process_list)):
-            p = process_list[i]
-            if not p.is_alive():
-                queue_lock.acquire()
-                remaining = work_queue.qsize()
-                queue_lock.release()
-                if remaining:
-                    p.kill()
-                    p = Process(target=main, args=(i,))
-                    process_list[i] = p
-                    restored += 1
-                else:
-                    finished = True
-        if restored:
-            logger.info("Restored %d processes (main process)" % restored)
-        time.sleep(60)
-
-    #with Pool(processes=threads) as pool:
-    #    pool.map(main, [i for i in range(threads)])
+    with Pool(processes=threads) as pool:
+        pool.map(main, [i for i in range(threads)])
