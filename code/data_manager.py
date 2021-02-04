@@ -135,7 +135,7 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                 elif "hash" in elem.keys():
                     if not resource.load(elem["hash"]):
                         if elem["blocked"] == "true":
-                            resource["is_tracking"] = True
+                            resource.values["is_tracking"] = True
                         resource.values["insert_date"] = t
                         resource.values["update_timestamp"] = t
                         if not resource.save():
