@@ -51,7 +51,7 @@ def get_extension_uuid(path, identifier):
                 for elem in line.split(","):
                     if re.search(identifier, elem):
                         uuid = elem.split(":")[1]
-    uuid = uuid.replace("\"", "").replace("\\", "").replace("}", "").replace(")", "").replace(";","")
+    uuid = uuid.replace("\"", "").replace("\\", "").replace("}", "").replace(")", "").replace(";", "")
     return uuid
 
 
@@ -118,13 +118,18 @@ def reset_browser(driver, process, plugin, cache):
 def visit_site(db, process, driver, domain, plugin, temp_folder, cache, geo_db):
     """ Loads the website and extract its information. """
 
-    blocker_tab_handle = driver.current_window_handle
+    try:
+        blocker_tab_handle = driver.current_window_handle
+    except Exception as e:
+        logger.error("Error saving uBlock tab: %s (proc. %d)" % (str(e), process))
+        driver = reset_browser(driver, process, plugin, cache)
+        return driver, FAILED, REPEAT
     try:
         driver.execute_script('''window.open();''')
         second_tab_handle = driver.window_handles[-1]
         driver.switch_to.window(second_tab_handle)
     except WebDriverException as e:
-        logger.warning("WebDriverException (1) on %s / Error: %s (proc. %d)" % (domain.values["name"], str(e), process))
+        logger.error("WebDriverException (1) on %s / Error: %s (proc. %d)" % (domain.values["name"], str(e), process))
         driver = reset_browser(driver, process, plugin, cache)
         return driver, FAILED, REPEAT
 
@@ -164,7 +169,12 @@ def visit_site(db, process, driver, domain, plugin, temp_folder, cache, geo_db):
         return driver, FAILED, REPEAT
 
     # Process traffic from uBlock Origin tab sessionStorage
-    driver.switch_to.window(blocker_tab_handle)
+    try:
+        driver.switch_to.window(blocker_tab_handle)
+    except Exception as e:
+        logger.error("Error accessing uBlock tab: %s (proc. %d)" % (str(e), process))
+        driver = reset_browser(driver, process, plugin, cache)
+        return driver, FAILED, REPEAT
     try:
         storage = SessionStorage(driver)
         web_list = {}

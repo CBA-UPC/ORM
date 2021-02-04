@@ -46,93 +46,76 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
 
     t = utc_now()
 
-    url_dict = []
-    # Insert new URL info
-    for url_string in request_list.keys():
-        url_info = json.loads(request_list[url_string])
-        if "security_info" not in url_info.keys():
+    try:
+        url_dict = []
+        # Insert new URL info
+        for url_string in request_list.keys():
+            url_info = json.loads(request_list[url_string])
+            if "security_info" not in url_info.keys():
+                url_dict.append(url_info)
+                continue
+            security_info = url_info["security_info"]
+            if "certificates" in security_info.keys() and len(security_info["certificates"]) > 0:
+                der_certificate = ''.join(format(x, '02x') for x in security_info["certificates"][0]["rawDER"])
+                certificate_hash = hash_string(der_certificate)
+                certificate = Connector(db, "certificate")
+                if not certificate.load(certificate_hash):
+                    pem_bytes = pem.armor('CERTIFICATE', bytes.fromhex(der_certificate))
+                    certificate.values["file"] = zlib.compress(pem_bytes)
+                    os.makedirs(temp_folder, exist_ok=True)
+                    with open(os.path.join(temp_folder, domain.values["name"] + ".pem"), "bw") as f:
+                        f.write(pem_bytes)
+                    certificate_json = certificate_to_json(os.path.join(temp_folder, domain.values["name"] + ".pem"))
+                    os.remove(os.path.join(temp_folder, domain.values["name"] + ".pem"))
+                    certificate.values["json"] = json.dumps(certificate_json)
+                    if not certificate.save():
+                        certificate.load(certificate_hash)
+                security_info.pop("certificates")
+                url_info["certificate"] = certificate.values["id"]
+            url_info["security_info"] = security_info
             url_dict.append(url_info)
-            continue
-        security_info = url_info["security_info"]
-        if "certificates" in security_info.keys() and len(security_info["certificates"]) > 0:
-            der_certificate = ''.join(format(x, '02x') for x in security_info["certificates"][0]["rawDER"])
-            certificate_hash = hash_string(der_certificate)
-            certificate = Connector(db, "certificate")
-            if not certificate.load(certificate_hash):
-                pem_bytes = pem.armor('CERTIFICATE', bytes.fromhex(der_certificate))
-                certificate.values["file"] = zlib.compress(pem_bytes)
-                os.makedirs(temp_folder, exist_ok=True)
-                with open(os.path.join(temp_folder, domain.values["name"] + ".pem"), "bw") as f:
-                    f.write(pem_bytes)
-                certificate_json = certificate_to_json(os.path.join(temp_folder, domain.values["name"] + ".pem"))
-                os.remove(os.path.join(temp_folder, domain.values["name"] + ".pem"))
-                certificate.values["json"] = json.dumps(certificate_json)
-                if not certificate.save():
-                    certificate.load(certificate_hash)
-            security_info.pop("certificates")
-            url_info["certificate"] = certificate.values["id"]
-        url_info["security_info"] = security_info
-        url_dict.append(url_info)
+    except Exception as e:
+        logger.error("(proc. %s) Error: Security info not parsed - %s" % (process, str(e)))
+        return
 
-    for elem in sorted(url_dict, key=lambda i: (int(i["requestId"]), int(i["timeStamp"]))):
-        url = Connector(db, "url")
-        if not url.load(hash_string(elem["url"])):
-            url.values["url"] = elem["url"]
-            url.values["method"] = elem["method"]
-            url.values["type"] = elem["type"]
-            if elem["blocked"] == "true":
-                url.values["blocked"] = 1
-            if "from_cache" in elem.keys():
-                url.values["from_cache"] = elem["from_cache"]
-            if not url.values["from_cache"] and "server_ip" in elem.keys():
-                url.values["server_ip"] = elem["server_ip"]
-                location = extract_location(url.values["server_ip"], geo_db)
-                if location["is_EU"]:
-                    url.values["is_EU"] = 1
-                url.values["country_code"] = location["country_code"]
-            if "request_headers" in elem.keys():
-                url.values["request_headers"] = json.dumps(elem["request_headers"])
-            content_type = Connector(db, "mime_type")
-            if "response_headers" in elem.keys():
-                url.values["response_headers"] = json.dumps(elem["response_headers"])
-                if "content-type" in elem["response_headers"]:
-                    if not content_type.load(hash_string(elem["response_headers"]["content-type"].split(";")[0])):
-                        content_type.values["name"] = elem["response_headers"]["content-type"].split(";")[0]
-                        if not content_type.save():
-                            content_type.load(hash_string(elem["response_headers"]["content-type"].split(";")[0]))
+    try:
+        for elem in sorted(url_dict, key=lambda i: (int(i["requestId"]), int(i["timeStamp"]))):
+            url = Connector(db, "url")
+            if not url.load(hash_string(elem["url"])):
+                url.values["url"] = elem["url"]
+                url.values["method"] = elem["method"]
+                url.values["type"] = elem["type"]
+                if elem["blocked"] == "true":
+                    url.values["blocked"] = 1
+                if "from_cache" in elem.keys():
+                    url.values["from_cache"] = elem["from_cache"]
+                if not url.values["from_cache"] and "server_ip" in elem.keys():
+                    url.values["server_ip"] = elem["server_ip"]
+                    location = extract_location(url.values["server_ip"], geo_db)
+                    if location["is_EU"]:
+                        url.values["is_EU"] = 1
+                    url.values["country_code"] = location["country_code"]
+                if "request_headers" in elem.keys():
+                    url.values["request_headers"] = json.dumps(elem["request_headers"])
+                content_type = Connector(db, "mime_type")
+                if "response_headers" in elem.keys():
+                    url.values["response_headers"] = json.dumps(elem["response_headers"])
+                    if "content-type" in elem["response_headers"]:
+                        if not content_type.load(hash_string(elem["response_headers"]["content-type"].split(";")[0])):
+                            content_type.values["name"] = elem["response_headers"]["content-type"].split(";")[0]
+                            if not content_type.save():
+                                content_type.load(hash_string(elem["response_headers"]["content-type"].split(";")[0]))
+                    else:
+                        content_type.load(hash_string("unknown"))
                 else:
                     content_type.load(hash_string("unknown"))
-            else:
-                content_type.load(hash_string("unknown"))
-            url.values["mime_type_id"] = content_type.values["id"]
-            if "security_info" in elem.keys():
-                url.values["security_info"] = json.dumps(elem["security_info"])
-            if "certificate" in elem.keys():
-                url.values["certificate_id"] = elem["certificate"]
-            if "hash" in elem.keys():
-                resource = Connector(db, "resource")
-                if not resource.load(elem["hash"]):
-                    if elem["blocked"] == "true":
-                        resource.values["is_tracking"] = True
-                    resource.values["insert_date"] = t
-                    resource.values["update_timestamp"] = t
-                    if not resource.save():
-                        resource.load(elem["hash"])
-                url.values["resource_id"] = resource.values["id"]
-            url.values["insert_date"] = t
-            url.values["update_timestamp"] = t
-            url.save()
-        else:
-            url.values["update_timestamp"] = t
-            url.save()
-        content_type = Connector(db, "mime_type")
-        content_type.load(url.values["mime_type_id"])
-        if content_type.values["download"]:
-            resource = Connector(db, "resource")
-            if url.values["resource_id"] or "hash" in elem.keys():
-                if url.values["resource_id"]:
-                    resource.load(url.values["resource_id"])
-                elif "hash" in elem.keys():
+                url.values["mime_type_id"] = content_type.values["id"]
+                if "security_info" in elem.keys():
+                    url.values["security_info"] = json.dumps(elem["security_info"])
+                if "certificate" in elem.keys():
+                    url.values["certificate_id"] = elem["certificate"]
+                if "hash" in elem.keys():
+                    resource = Connector(db, "resource")
                     if not resource.load(elem["hash"]):
                         if elem["blocked"] == "true":
                             resource.values["is_tracking"] = True
@@ -140,45 +123,70 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                         resource.values["update_timestamp"] = t
                         if not resource.save():
                             resource.load(elem["hash"])
-                        url.values["resource_id"] = resource.values["id"]
-                        url.save()
-                resource.values["update_timestamp"] = t
-                if elem["blocked"] == "true":
-                    resource.values["is_tracking"] = True
-                if resource.values["hash"] and not resource.values["file"]:
-                    os.makedirs(os.path.join(os.path.abspath("."), temp_folder), exist_ok=True)
-                    filename = os.path.join(temp_folder, domain.values["name"] + '.tmp')
-                    if download_url(process, url.values["url"], filename):
-                        size = os.stat(filename).st_size
-                        # Compress the code
-                        with open(filename, 'rb') as f:
-                            code = f.read()
-                        compressed_code = zlib.compress(code)
-                        resource.values["file"] = compressed_code
-                        resource.values["size"] = size
-                        resource.values["fuzzy_hash"] = lsh_file(filename)
-                        os.remove(filename)
-                    else:
-                        logger.error("(proc. %s) Error #1: Resource not correctly saved - %s" % (process, elem["url"]))
-                if not resource.save():
-                    # Wait until the other thread saves the file inside the database (or 30s max)
-                    seconds = 30
-                    while not resource.load(elem["hash"]) and seconds > 0:
-                        seconds -= 1
-                        time.sleep(1)
-                db.call("ComputeResourceType", values=[resource.values["id"]])
-                #db.call("ComputeResourcePopularityLevel", values=[resource.values["id"]])
+                    url.values["resource_id"] = resource.values["id"]
+                url.values["insert_date"] = t
+                url.values["update_timestamp"] = t
+                url.save()
+            else:
+                url.values["update_timestamp"] = t
+                url.save()
+            content_type = Connector(db, "mime_type")
+            content_type.load(url.values["mime_type_id"])
+            if content_type.values["download"]:
+                resource = Connector(db, "resource")
+                if url.values["resource_id"] or "hash" in elem.keys():
+                    if url.values["resource_id"]:
+                        resource.load(url.values["resource_id"])
+                    elif "hash" in elem.keys():
+                        if not resource.load(elem["hash"]):
+                            if elem["blocked"] == "true":
+                                resource.values["is_tracking"] = True
+                            resource.values["insert_date"] = t
+                            resource.values["update_timestamp"] = t
+                            if not resource.save():
+                                resource.load(elem["hash"])
+                            url.values["resource_id"] = resource.values["id"]
+                            url.save()
+                    resource.values["update_timestamp"] = t
+                    if elem["blocked"] == "true":
+                        resource.values["is_tracking"] = True
+                    if resource.values["hash"] and not resource.values["file"]:
+                        os.makedirs(os.path.join(os.path.abspath("."), temp_folder), exist_ok=True)
+                        filename = os.path.join(temp_folder, domain.values["name"] + '.tmp')
+                        if download_url(process, url.values["url"], filename):
+                            size = os.stat(filename).st_size
+                            # Compress the code
+                            with open(filename, 'rb') as f:
+                                code = f.read()
+                            compressed_code = zlib.compress(code)
+                            resource.values["file"] = compressed_code
+                            resource.values["size"] = size
+                            resource.values["fuzzy_hash"] = lsh_file(filename)
+                            os.remove(filename)
+                        else:
+                            logger.error("(proc. %s) Error #1: Resource not correctly saved - %s" % (process, elem["url"]))
+                    if not resource.save():
+                        # Wait until the other thread saves the file inside the database (or 30s max)
+                        seconds = 30
+                        while not resource.load(elem["hash"]) and seconds > 0:
+                            seconds -= 1
+                            time.sleep(1)
+                    db.call("ComputeResourceType", values=[resource.values["id"]])
+                    #db.call("ComputeResourcePopularityLevel", values=[resource.values["id"]])
 
-        # json.dump(elem, sys.stdout, indent=2, ensure_ascii=False)
-        initiator_id = None
-        if "originUrl" in elem.keys():
-            initiator_frame = Connector(db, "url")
-            initiator_frame.load(hash_string(elem["originUrl"]))
-            initiator_id = initiator_frame.values["id"]
-        domain.add_double(url, plugin, {"third_party": elem["thirdParty"],
-                                        "initiator_frame": initiator_id,
-                                        "insert_date": t,
-                                        "update_timestamp": t})
+            # json.dump(elem, sys.stdout, indent=2, ensure_ascii=False)
+            initiator_id = None
+            if "originUrl" in elem.keys():
+                initiator_frame = Connector(db, "url")
+                initiator_frame.load(hash_string(elem["originUrl"]))
+                initiator_id = initiator_frame.values["id"]
+            domain.add_double(url, plugin, {"third_party": elem["thirdParty"],
+                                            "initiator_frame": initiator_id,
+                                            "insert_date": t,
+                                            "update_timestamp": t})
+    except Exception as e:
+        logger.error("(proc. %s) Error: URL info not parsed - %s" % (process, str(e)))
+        return
 
 
 def download_url(process, url, filename):
