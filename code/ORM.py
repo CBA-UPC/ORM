@@ -55,6 +55,8 @@ parser.add_argument('--statefull', dest='cache', action="store_true",
                     help='Enables cache/cookies (Default: Clear cache/cookies)')
 parser.add_argument('--no-update', dest='no_update', action="store_true",
                     help='Not scraps already scraped domains between the selected range (Default: Update)')
+parser.add_argument('--update-ublock', dest='update_ublock', action="store_true",
+                    help='Updates uBlock pattern lists every time a new browser is launched (Default: no update)')
 
 
 def main(process):
@@ -76,9 +78,9 @@ def main(process):
     # Load the selenium driver with proper plugins
     driver_list = []
     for plugin in plugin_list:
-        driver = build_driver(plugin, cache, process)
+        driver = build_driver(plugin, cache, update_ublock, process)
         while not driver:
-            driver = build_driver(plugin, cache, process)
+            driver = build_driver(plugin, cache, update_ublock, process)
         driver.set_page_load_timeout(30)
         driver_list.append([driver, plugin])
 
@@ -111,12 +113,12 @@ def main(process):
                     domain.remove(url)
                 # Launch the crawl
                 driver[0], completed, repeat = visit_site(db, process, driver[0], domain,
-                                                          driver[1], temp_folder, cache, geo_db)
+                                                          driver[1], temp_folder, cache, update_ublock, geo_db)
                 extra_tries = 2
                 while extra_tries > 0 and not completed and repeat:
                     extra_tries -= 1
                     driver[0], completed, repeat = visit_site(db, process, driver[0], domain,
-                                                              driver[1], temp_folder, cache, geo_db)
+                                                              driver[1], temp_folder, cache, update_ublock, geo_db)
     db.close()
     for driver in driver_list:
         driver[0].close()
@@ -129,6 +131,7 @@ if __name__ == '__main__':
     # Take arguments
     args = parser.parse_args()
     cache = args.cache
+    update_ublock = args.update_ublock
     no_update = args.no_update
     threads = args.threads
     temp_folder = os.path.join(os.path.abspath("."), args.tmp)
