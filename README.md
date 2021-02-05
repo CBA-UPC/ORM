@@ -33,13 +33,15 @@ Lastly, we will make use of [Mysql Workbench](https://www.mysql.com/products/wor
 
 3) Execute [update_top1M.sh](assets/alexa/update_top1M.sh) to download the most recent version of Alexa's top 1M popular website list.
 
-4) Execute [db_initializer.py](code/db_initializer.py) to store the basic data inside the database.
+4) Create a "log" folder inside the "code" folder.
+
+5) Execute [db_initializer.py](code/db_initializer.py) to store the basic data inside the database.
 Usage: db_initializer.py 0 1000
 
 The two parameters specify the range of the most popular websites to include inside the database. 
 To explore more parameters execute "db_initializer --help".
 
-5) Execute [orm.py](code/ORM.py) to start parsing websites.
+6) Execute [orm.py](code/ORM.py) to start parsing websites.
 
 Usage: orm.py -start 0 -end 1000 -t 4
 
