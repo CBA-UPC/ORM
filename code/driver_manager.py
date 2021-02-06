@@ -63,6 +63,8 @@ def build_driver(plugin, cache, update_ublock, process):
         # Disable browser content protection measures
         profile.set_preference("privacy.trackingprotection.enabled", False)
         profile.set_preference("browser.contentblocking.enabled", False)
+        profile.set_preference("dom.storage.default_quota", 51200)
+        profile.set_preference("dom.storage.default_site_quota", 51200)
 
         # Disable caches and enables private mode for stateless scraps
         if not cache:
@@ -71,7 +73,7 @@ def build_driver(plugin, cache, update_ublock, process):
             profile.set_preference("browser.cache.offline.enable", False)
             profile.set_preference("network.http.use-cache", False)
 
-        driver = webdriver.Firefox(profile)
+        driver = webdriver.Firefox(profile, log_path="log/geckodriver.log")
         driver.set_page_load_timeout(60)
     except Exception as e:
         # logger.error(e)
@@ -161,7 +163,6 @@ def visit_site(db, process, driver, domain, plugin, temp_folder, cache, update_u
         return driver, FAILED, NO_REPEAT
     # Wait some time inside the website
     time.sleep(10)
-    driver.implicitly_wait(10)
     try:
         # Close possible alerts
         finished = False
