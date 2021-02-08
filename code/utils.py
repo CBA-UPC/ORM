@@ -18,10 +18,8 @@
 
 # -*- coding: utf-8 -*-
 
-import json
 import socket
 import ssl
-import sys
 from datetime import datetime, timezone
 from hashlib import sha256
 from urllib.parse import urlparse

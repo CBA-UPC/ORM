@@ -21,7 +21,6 @@
 # Basic modules
 import argparse
 import os
-import logging
 import logging.config
 import queue
 import zlib
@@ -34,11 +33,10 @@ from w3lib.encoding import html_to_unicode
 from rabin import get_file_fingerprints, set_min_block_size, set_max_block_size, set_average_block_size
 
 # Own modules
-import config
 from db_manager import Db, Connector
 from utils import utc_now
 
-logging.config.fileConfig('../logging.conf')
+logging.config.fileConfig('logging.conf')
 
 verbose = {"0": logging.CRITICAL, "1": logging.ERROR, "2": logging.WARNING, "3": logging.INFO, "4": logging.DEBUG}
 

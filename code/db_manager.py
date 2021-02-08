@@ -74,13 +74,12 @@ request for specific reasons.
 # Basic modules
 import MySQLdb
 import re
-import config
-import logging
 import logging.config
 
+import config
 from utils import hash_string
 
-logging.config.fileConfig('../logging.conf')
+logging.config.fileConfig('logging.conf')
 logger = logging.getLogger("DB_MANAGER")
 
 CROSS_TABLES = ["domain_url", "resource_fingerprint", "resource_codeset"]

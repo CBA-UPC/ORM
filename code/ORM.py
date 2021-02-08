@@ -23,7 +23,7 @@ import argparse
 import os
 import logging.config
 import queue
-from multiprocessing import Pool, Queue, cpu_count, Lock, Process
+from multiprocessing import Pool, Queue, cpu_count, Lock
 
 # Own modules
 from db_manager import Db, Connector
@@ -34,7 +34,7 @@ from geoip2 import database as geolocation
 
 import config
 
-logging.config.fileConfig('../logging.conf')
+logging.config.fileConfig('logging.conf')
 
 verbose = {"0": logging.CRITICAL, "1": logging.ERROR, "2": logging.WARNING, "3": logging.INFO, "4": logging.DEBUG}
 

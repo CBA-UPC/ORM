@@ -1,22 +1,19 @@
 # Basic modules
 import argparse
 import os
-import logging
 import logging.config
 import queue
 import zlib
-import json
 from multiprocessing import Pool, Queue, cpu_count, Lock
 
 import esprima
 from bs4 import BeautifulSoup
 
 # Own modules
-import config
 from db_manager import Db, Connector
-from utils import utc_now, hash_string
+from utils import hash_string
 
-logging.config.fileConfig('../logging.conf')
+logging.config.fileConfig('logging.conf')
 
 verbose = {"0": logging.CRITICAL, "1": logging.ERROR, "2": logging.WARNING, "3": logging.INFO, "4": logging.DEBUG}
 

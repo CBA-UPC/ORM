@@ -35,7 +35,7 @@ from db_manager import Db, Connector
 from utils import download_file, hash_file, lsh_file, hash_string, utc_now
 from utils import certificate_to_json, extract_location
 
-logging.config.fileConfig('../logging.conf')
+logging.config.fileConfig('logging.conf')
 
 logger = logging.getLogger("DATA_MANAGER")
 

@@ -22,7 +22,6 @@
 import os
 import re
 import time
-import logging
 import logging.config
 
 # 3rd party modules
@@ -32,14 +31,13 @@ from selenium.common.exceptions import NoSuchWindowException
 from selenium.webdriver.common.alert import Alert
 
 # Own modules
-import config
 from data_manager import manage_requests
 from session_storage import SessionStorage
 
 COMPLETED = REPEAT = True
 FAILED = NO_REPEAT = False
 
-logging.config.fileConfig('../logging.conf')
+logging.config.fileConfig('logging.conf')
 
 logger = logging.getLogger("DRIVER_MANAGER")
 
