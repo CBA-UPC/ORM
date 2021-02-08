@@ -21,7 +21,6 @@
 # Basic modules
 import argparse
 import os
-import time
 import logging.config
 import queue
 from multiprocessing import Pool, Queue, cpu_count, Lock, Process
@@ -29,7 +28,6 @@ from multiprocessing import Pool, Queue, cpu_count, Lock, Process
 # Own modules
 from db_manager import Db, Connector
 from driver_manager import build_driver, visit_site
-from utils import hash_string
 
 # Third-party modules
 from geoip2 import database as geolocation
@@ -149,6 +147,7 @@ if __name__ == '__main__':
         except Exception as e:
             logger.warning("Platform not recognized. Getting the maximum CPU's")
             available_cpu = cpu
+        # Save 1 CPU for other purposes
         if cpu > 1 and cpu == available_cpu:
             threads = cpu - 1
         else:

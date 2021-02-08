@@ -20,7 +20,6 @@
 
 # Basic modules
 import os
-import sys
 import json
 import logging
 import logging.config
@@ -58,7 +57,7 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
         request_list.pop(key)
 
     url_dict = []
-    # Insert new URL info
+    # Insert certificates info
     for url_string in request_list.keys():
         url_info = json.loads(request_list[url_string])
         if "security_info" not in url_info.keys():
@@ -85,8 +84,11 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
         url_info["security_info"] = security_info
         url_dict.append(url_info)
 
+    # Insert URL info
+    # We sort them by request id and timestamp to link parent urls with child ones
     for elem in sorted(url_dict, key=lambda i: (int(i["requestId"]), int(i["timeStamp"]))):
         url = Connector(db, "url")
+        # If not previously seen URL insert it
         if not url.load(hash_string(elem["url"])):
             url.values["url"] = elem["url"]
             url.values["method"] = elem["method"]
@@ -116,10 +118,12 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
             else:
                 content_type.load(hash_string("unknown"))
             url.values["mime_type_id"] = content_type.values["id"]
+            # Link the certificate
             if "security_info" in elem.keys():
                 url.values["security_info"] = json.dumps(elem["security_info"])
             if "certificate" in elem.keys():
                 url.values["certificate_id"] = elem["certificate"]
+            # Create the resource element if needed and link it
             if "hash" in elem.keys():
                 resource = Connector(db, "resource")
                 if not resource.load(elem["hash"]):
@@ -134,8 +138,10 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
             url.values["update_timestamp"] = t
             url.save()
         else:
+            # I URL has already been found update the timestamp
             url.values["update_timestamp"] = t
             url.save()
+        # Depending on the resource type download it if needed
         content_type = Connector(db, "mime_type")
         content_type.load(url.values["mime_type_id"])
         if content_type.values["download"]:
@@ -167,6 +173,7 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                         compressed_code = zlib.compress(code)
                         resource.values["file"] = compressed_code
                         resource.values["size"] = size
+                        # Compute the fuzzy hash
                         resource.values["fuzzy_hash"] = lsh_file(filename)
                         os.remove(filename)
                     else:
@@ -177,10 +184,16 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                     while not resource.load(elem["hash"]) and seconds > 0:
                         seconds -= 1
                         time.sleep(1)
+                # Update the most probable type of the resource:
+                # --- Different URLs pointing to the same resource can mark it as different types.
+                # --- We set the most prevalent one
                 db.call("ComputeResourceType", values=[resource.values["id"]])
+                # TODO: Fix the popularity update DB procedure
                 #db.call("ComputeResourcePopularityLevel", values=[resource.values["id"]])
 
         # json.dump(elem, sys.stdout, indent=2, ensure_ascii=False)
+
+        # Insert the relation between the domain and the URL (including the HTML frame that called it)
         initiator_id = None
         if "originUrl" in elem.keys():
             initiator_frame = Connector(db, "url")

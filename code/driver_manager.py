@@ -102,7 +102,6 @@ def build_driver(plugin, cache, update_ublock, process):
         return driver
     except Exception as e:
         driver.quit()
-        # logger.error(e)
         logger.error("(proc. %d) Error creating driver: %s" % (process, str(e)))
         return FAILED
 
