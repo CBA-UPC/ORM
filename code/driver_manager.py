@@ -152,7 +152,7 @@ def visit_site(db, process, driver, domain, plugin, temp_folder, cache, update_u
         except WebDriverException as e:
             logger.error("(proc. %d) Error clearing session storage: %s" % (process, str(e)))
             driver = reset_browser(driver, process, plugin, cache, update_ublock)
-        return driver, FAILED, NO_REPEAT
+        return driver, FAILED, REPEAT
     except WebDriverException as e:
         logger.warning("WebDriverException (2) on %s / Error: %s (proc. %d)" % (domain.values["name"], str(e), process))
         driver = reset_browser(driver, process, plugin, cache, update_ublock)

@@ -46,6 +46,17 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
 
     t = utc_now()
 
+    # Clean malformed URL info groups
+    # TODO: Check the reason for the malformed ones
+    keys_to_delete = []
+    for key in request_list.keys():
+        elem = json.loads(request_list[key])
+        if not isinstance(elem, dict) or "requestId" not in elem.keys():
+            keys_to_delete.append(key)
+            logger.info("(proc. %s) : URL details not present - %s" % (process, key))
+    for key in keys_to_delete:
+        request_list.pop(key)
+
     url_dict = []
     # Insert new URL info
     for url_string in request_list.keys():
