@@ -136,7 +136,12 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                 url.values["resource_id"] = resource.values["id"]
             url.values["insert_date"] = t
             url.values["update_timestamp"] = t
-            url.save()
+            if not url.save():
+                # Wait until the other thread saves the URL inside the database (or 10s max)
+                seconds = 30
+                while not url.load(elem["hash"]) and seconds > 0:
+                    seconds -= 1
+                    time.sleep(1)
         else:
             # I URL has already been found update the timestamp
             url.values["update_timestamp"] = t

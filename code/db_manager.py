@@ -570,8 +570,6 @@ class Connector(object):
         requests = ["DISTINCT id"]
         tables = []
         conditions = [self.table + "_id", element1.table + "_id", element2.table + "_id"]
-        if "resource_id" in args.keys():
-            conditions.append("resource_id")
         orders = ["id"]
         values = [self.values["id"], element1.values["id"], element2.values["id"]]
         if "resource_id" in args.keys():
