@@ -94,15 +94,6 @@ def main(process):
         else:
             domain = Connector(db, "domain")
             domain.load(site)
-            document = Connector(db, "type")
-            document.load(hash_string("Document"))
-            urls = domain.get("url", order="url_id")
-            present = False
-            for url in urls:
-                if url.values["type"] == document.values["id"]:
-                    present = True
-            if present and no_update:
-                continue
             logger.info('Job [%d/%d] %s (proc: %d)' % (total - current, total, domain.values["name"], process))
             for i in range(repetitions):
                 for driver in driver_list:
@@ -151,8 +142,14 @@ if __name__ == '__main__':
         rq += " WHERE domain.id > %d" % (args.start - 1)
         if args.end > 0:
             rq += " AND domain.id < %d" % (args.end + 1)
+        if no_update:
+            rq += " AND domain.id NOT IN (SELECT DISTINCT(domain_id) FROM QoE)"
     elif args.end > 0:
         rq += " WHERE domain.id < %d" % (args.end + 1)
+        if no_update:
+            rq += " AND domain.id NOT IN (SELECT DISTINCT(domain_id) FROM QoE)"
+    elif no_update:
+        rq += " WHERE domain.id NOT IN (SELECT DISTINCT(domain_id) FROM QoE)"
     rq += " ORDER BY domain.id"
     results = database.custom(rq)
     total = len(results)
