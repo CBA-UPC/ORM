@@ -96,12 +96,17 @@ def main(process):
             domain.load(site)
             logger.info('Job [%d/%d] %s (proc: %d)' % (total - current, total, domain.values["name"], process))
             total_failed = [0, 0, 0, 0, 0]
+            total_cleared = [0, 0, 0, 0, 0]
             for i in range(repetitions):
                 for j in range(len(driver_list)):
+                    if total_cleared[j] >= 5:
+                        continue
                     driver = driver_list[j]
                     driver[0], failed = visit_site(db, process, driver[0], driver[1], domain, driver[2], temp_folder, cache)
                     if failed:
                         total_failed[j] += 1
+                    else:
+                        total_cleared[j] += 1
                     if max(total_failed) > repetitions - 5:
                         break
                 if max(total_failed) > repetitions - 5:

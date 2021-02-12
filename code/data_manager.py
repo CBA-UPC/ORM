@@ -244,8 +244,9 @@ def get_performance(db, domain, plugin, log, process):
 #        qoe.values["lighthouse_log"] = compressed_lh_log
         qoe.values["insert_date"] = t
         qoe.values["update_timestamp"] = t
+        qoe.save()
     except Exception as e:
         logger.error("(proc. %d) Lighthouse error on website %s" % (process, domain.values["name"]))
-        return
-    return qoe.save()
+        return True
+    return False
 
