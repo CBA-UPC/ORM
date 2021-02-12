@@ -164,7 +164,7 @@ def visit_site(db, process, driver, port, domain, plugin, temp_folder, cache):
         time.sleep(1)
     if stream.close():
         logger.error("(proc. %d) Lighthouse error on website %s" % (process, domain.values["name"]))
-        return driver
+        return driver, True
     with open(trace_file, "r") as f:
         trace = json.load(f)
         network_traffic = get_network(trace)
@@ -176,8 +176,8 @@ def visit_site(db, process, driver, port, domain, plugin, temp_folder, cache):
                 manage_request(db, domain, network_traffic[key]["requests"][sub_key], plugin)
         with open(log_file, "r") as f2:
             log = json.load(f2)
-            get_performance(db, domain, plugin, log, process)
+            failed = get_performance(db, domain, plugin, log, process)
 
     shutil.rmtree(trace_path)
     driver, port = reset_browser(driver, process, plugin, cache)
-    return driver
+    return driver, failed

@@ -95,9 +95,18 @@ def main(process):
             domain = Connector(db, "domain")
             domain.load(site)
             logger.info('Job [%d/%d] %s (proc: %d)' % (total - current, total, domain.values["name"], process))
+            total_failed = [0, 0, 0, 0, 0]
             for i in range(repetitions):
-                for driver in driver_list:
-                    driver[0] = visit_site(db, process, driver[0], driver[1], domain, driver[2], temp_folder, cache)
+                for j in range(len(driver_list)):
+                    driver = driver_list[j]
+                    driver[0], failed = visit_site(db, process, driver[0], driver[1], domain, driver[2], temp_folder, cache)
+                    if failed:
+                        total_failed[j] += 1
+                    if max(total_failed) > repetitions - 5:
+                        break
+                if max(total_failed) > repetitions - 5:
+                    db.custom("DELETE from QoE WHERE domain_id = %d" % domain.values["id"])
+                    break
             # work_queue.task_done()
     db.close()
     for driver in driver_list:
