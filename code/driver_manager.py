@@ -163,7 +163,7 @@ def visit_site(db, process, driver, port, domain, plugin, temp_folder, cache):
         retries += 1
         time.sleep(1)
     if stream.close():
-        logger.debug("(proc. %d) Lighthouse error on website %s" % (process, domain.values["name"]))
+        logger.error("(proc. %d) Lighthouse error on website %s" % (process, domain.values["name"]))
         return driver
     with open(trace_file, "r") as f:
         trace = json.load(f)
