@@ -176,7 +176,7 @@ def visit_site(db, process, driver, port, domain, plugin, temp_folder, cache):
                 manage_request(db, domain, network_traffic[key]["requests"][sub_key], plugin)
         with open(log_file, "r") as f2:
             log = json.load(f2)
-            get_performance(db, domain, plugin, log, trace)
+            get_performance(db, domain, plugin, log, process)
 
     shutil.rmtree(trace_path)
     driver, port = reset_browser(driver, process, plugin, cache)

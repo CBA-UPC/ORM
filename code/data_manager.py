@@ -171,7 +171,7 @@ def get_network(log_entries):
     return network_traffic
 
 
-def get_performance(db, domain, plugin, log, trace):
+def get_performance(db, domain, plugin, log, process):
     """ Reads the lighthouse log entries and inserts inside DB a QoE entry. """
 
     t = utc_now()
