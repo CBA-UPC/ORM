@@ -355,7 +355,8 @@ if __name__ == '__main__':
     # Get domains between the given range from the database.
     logger.info("Getting work")
     database = Db()
-    rq = 'SELECT id FROM resource WHERE split = 0 AND type IS NOT NULL and type IN ("frame", "script") ORDER BY id'
+    rq = 'SELECT id FROM resource WHERE split = 0 AND type IS NOT NULL AND size > 0 AND type IN ("frame", "script")'
+    rq += ' ORDER BY id'
     results = database.custom(rq)
     total = len(results)
     logger.info("Gotten %d jobs to enqueue" % total)
@@ -379,7 +380,6 @@ if __name__ == '__main__':
 
         # Restore signal on main thread
         signal.signal(signal.SIGINT, original_sigint_handler)
-
 
         try:
             while True:
