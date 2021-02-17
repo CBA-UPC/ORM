@@ -7,6 +7,7 @@ During our experiments we found that only one instance of the system can scrap i
 ### Requirements
 We strongly recommend the use of Python 3.7, since lower versions may not support the required modules.
 The following packages are required:
+* wheel>=0.36.2
 * beautifulsoup4 >= 4.8.2
 * geoip2 >= 3.0.0
 * jsbeautifier >= 1.11.0
@@ -17,8 +18,9 @@ The following packages are required:
 * selenium >= 3.141.0
 * tldextract >= 2.2.2
 * asn1crypto >= 1.4.0
+* esprima >= 4.0.1
 
-You can install them using *pip install -r requirements.txt* from the downloaded folder.
+You can install them using *pip install -r requirements.txt* from the downloaded folder. To compile some of the modules you will need the python-dev library corresponding to you Python version.
 
 Moreover, to compute the *fuzzy_hashes* used to compare resources, we need to install tlsh. You can follow the official [guide.](https://github.com/trendmicro/tlsh) For future proof, we include inside [assets](assets/) folder the current version of the module used by ORM.
 
