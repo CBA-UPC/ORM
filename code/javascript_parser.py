@@ -265,7 +265,7 @@ def compute_codesets(resource, ast_data):
                                "insert_date": resource.values["insert_date"],
                                "update_timestamp": resource.values["update_timestamp"]})
         resource.db.call("ComputeCodesetDirtLevel", values=[codeset.values["id"]])
-        # resource.db.call("ComputeCodesetPopularityLevel", values=[codeset.values["id"]])
+        resource.db.call("ComputeCodesetPopularityLevel", values=[codeset.values["id"]])
 
 
 parser = argparse.ArgumentParser(description='JavaScript parser')
