@@ -93,7 +93,7 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
             url.values["url"] = elem["url"]
             url.values["method"] = elem["method"]
             url.values["type"] = elem["type"]
-            if elem["blocked"] == "true":
+            if elem["blocked"]:
                 url.values["blocked"] = 1
             if "from_cache" in elem.keys():
                 url.values["from_cache"] = elem["from_cache"]
@@ -127,8 +127,8 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
             if "hash" in elem.keys():
                 resource = Connector(db, "resource")
                 if not resource.load(elem["hash"]):
-                    if elem["blocked"] == "true":
-                        resource.values["is_tracking"] = True
+                    if elem["blocked"]:
+                        resource.values["is_tracking"] = 1
                     resource.values["insert_date"] = t
                     resource.values["update_timestamp"] = t
                     if not resource.save():
@@ -156,8 +156,8 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                     resource.load(url.values["resource_id"])
                 elif "hash" in elem.keys():
                     if not resource.load(elem["hash"]):
-                        if elem["blocked"] == "true":
-                            resource.values["is_tracking"] = True
+                        if elem["blocked"]:
+                            resource.values["is_tracking"] = 1
                         resource.values["insert_date"] = t
                         resource.values["update_timestamp"] = t
                         if not resource.save():
@@ -165,8 +165,8 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                         url.values["resource_id"] = resource.values["id"]
                         url.save()
                 resource.values["update_timestamp"] = t
-                if elem["blocked"] == "true":
-                    resource.values["is_tracking"] = True
+                if elem["blocked"]:
+                    resource.values["is_tracking"] = 1
                 if resource.values["hash"] and not resource.values["file"]:
                     os.makedirs(os.path.join(os.path.abspath("."), temp_folder), exist_ok=True)
                     filename = os.path.join(temp_folder, domain.values["name"] + '.tmp')
