@@ -353,12 +353,12 @@ if __name__ == '__main__':
     # Get domains between the given range from the database.
     logger.info("Getting work")
     database = Db()
-    rq = "SELECT resource.id FROM resource WHERE split = 0"
+    rq = 'SELECT id FROM resource WHERE split = 0 AND type IS NOT NULL and type IN ("frame", "script")'
     if args.start > 0:
-        rq += " AND resource.id > %d" % (args.start - 1)
+        rq += " AND id > %d" % (args.start - 1)
     if args.end > 0:
-        rq += " AND resource.id < %d" % (args.end + 1)
-    rq += " ORDER BY resource.id"
+        rq += " AND id < %d" % (args.end + 1)
+    rq += " ORDER BY id"
     results = database.custom(rq)
     total = len(results)
     logger.info("Gotten %d jobs to enqueue" % total)
