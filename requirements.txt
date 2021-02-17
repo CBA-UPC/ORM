@@ -1,3 +1,4 @@
+wheel>=0.36.2
 beautifulsoup4>=4.8.2
 geoip2>=3.0.0
 jsbeautifier>=1.11.0
@@ -8,3 +9,4 @@ requests>=2.23.0
 selenium>=3.141.0
 tldextract>=2.2.2
 asn1crypto>=1.4.0
+esprima>=4.0.1
