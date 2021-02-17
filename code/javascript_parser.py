@@ -258,13 +258,14 @@ def compute_codesets(resource, ast_data):
                 codeset.values["insert_date"] = resource.values["insert_date"]
             if codeset.values["update_timestamp"] < resource.values["update_timestamp"]:
                 codeset.values["update_timestamp"] = resource.values["update_timestamp"]
-            codeset.save()
+            if not codeset.save():
+                codeset.load(hash_value)
         resource.add(codeset, {"offset": ast_data["offset"][j],
                                "length": ast_data["length"][j],
                                "insert_date": resource.values["insert_date"],
                                "update_timestamp": resource.values["update_timestamp"]})
         resource.db.call("ComputeCodesetDirtLevel", values=[codeset.values["id"]])
-        resource.db.call("ComputeCodesetPopularityLevel", values=[codeset.values["id"]])
+        # resource.db.call("ComputeCodesetPopularityLevel", values=[codeset.values["id"]])
 
 
 parser = argparse.ArgumentParser(description='JavaScript parser')
