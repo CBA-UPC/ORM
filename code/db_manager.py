@@ -243,6 +243,19 @@ class Db(object):
                 logger.debug(request % tuple(values))
             cursor.execute(request, tuple(values))
         except MySQLdb.Error as error:
+            deadlock = 0
+            if re.search('Deadlock', error):
+                deadlock = 1
+            while deadlock:
+                try:
+                    cursor.execute(request % tuple(values))
+                except MySQLdb.Error as e:
+                    if not re.search('Deadlock', e):
+                        deadlock = 0
+                        error = e
+                else:
+                    cursor.close()
+                    return 0
             logger.error(request % tuple(values))
             logger.error("SQL ERROR: " + str(error) + "\n-----------------")
             cursor.close()
