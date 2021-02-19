@@ -228,16 +228,10 @@ class Db(object):
             logger.warning("Incorrect number of fields/conditions/values")
             return 0
         request = "UPDATE IGNORE " + table
-        if fields[0] == "insert_date" or fields[0] == "update_timestamp":
-            request += " SET " + fields[0] + ' = "%s"'
-        else:
-            request += " SET " + fields[0] + " = %s"
+        request += " SET " + fields[0] + " = %s"
         if len(fields) > 1:
             for index in range(1, len(fields)):
-                if fields[index] == "insert_date" or fields[index] == "update_timestamp":
-                    request += ', ' + fields[index] + ' = "%s"'
-                else:
-                    request += ", " + fields[index] + " = %s"
+                request += ", " + fields[index] + " = %s"
         request += " WHERE " + conditions[0] + " = %s"
         if len(conditions) > 1:
             for index in range(1, len(conditions)):
