@@ -376,7 +376,7 @@ if __name__ == '__main__':
     # Create and call the workers
     logger.info("Opening workers")
     with Pool(processes=threads) as pool:
-        pool.map(main, [i for i in range(threads)])
+        pool.map_async(main, [i for i in range(threads)])
 
         # Restore signal on main thread
         signal.signal(signal.SIGINT, original_sigint_handler)
