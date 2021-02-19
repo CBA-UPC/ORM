@@ -370,8 +370,9 @@ if __name__ == '__main__':
     work_queue = Queue()
     queue_lock = Lock()
     last_inserted_id = results[-1]["id"]
+    shuffle(results)
 
-    for result in shuffle(results):
+    for result in results:
         work_queue.put(result["id"])
 
     # Inhibit signals on workers
@@ -393,7 +394,8 @@ if __name__ == '__main__':
                 rq += " ORDER BY id"
                 results = database.custom(rq)
                 last_inserted_id = results[-1]["id"]
-                for result in shuffle(results):
+                shuffle(results)
+                for result in results:
                     queue_lock.acquire()
                     work_queue.put(result["id"])
                     queue_lock.release()
