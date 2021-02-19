@@ -248,8 +248,6 @@ class Db(object):
                 deadlock = 1
             while deadlock:
                 try:
-                    cursor.close()
-                    cursor = self.conn.cursor(MySQLdb.cursors.DictCursor)
                     cursor.execute(request % tuple(values))
                 except MySQLdb.Error as e:
                     if not re.search('Deadlock', str(e)):
@@ -262,11 +260,12 @@ class Db(object):
             logger.error("SQL ERROR: " + str(error) + "\n-----------------")
             cursor.close()
             return 0
-        self.conn.commit()
-        if log:
-            logger.debug("REQUEST OK.\n-----------------")
-        cursor.close()
-        return -1
+        else:
+            self.conn.commit()
+            if log:
+                logger.debug("REQUEST OK.\n-----------------")
+            cursor.close()
+            return -1
 
     def _delete(self, table, conditions, values, log=None):
         """ Creates a standard DELETE request. """
