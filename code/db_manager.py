@@ -244,13 +244,13 @@ class Db(object):
             cursor.execute(request, tuple(values))
         except MySQLdb.Error as error:
             deadlock = 0
-            if re.search('Deadlock', str(error)):
+            if re.search('Deadlock', error):
                 deadlock = 1
             while deadlock:
                 try:
                     cursor.execute(request % tuple(values))
                 except MySQLdb.Error as e:
-                    if not re.search('Deadlock', str(e)):
+                    if not re.search('Deadlock', e):
                         deadlock = 0
                         error = e
                 else:
