@@ -6,6 +6,7 @@ import queue
 import zlib
 import time
 import signal
+from random import shuffle
 from multiprocessing import Pool, Queue, cpu_count, Lock
 
 import esprima
@@ -288,11 +289,12 @@ def main(process):
     # Load the DB manager for this process
     db = Db()
 
-    remaining = True
+
     while True:
         try:
             queue_lock.acquire()
             resource_id = work_queue.get(False)
+            pending = work_queue.qsize()
             queue_lock.release()
         except queue.Empty:
             queue_lock.release()
@@ -301,10 +303,12 @@ def main(process):
         except Exception as e:
             logger.error("%s (proc. %d)" % (str(e), process))
         else:
-            logger.info('Resource %d (proc: %d)' % (resource_id, process))
+            logger.info('Resource %d [Pending: %d] (proc: %d)' % (resource_id, pending, process))
             ast_data = {"subtrees": [], "ongoing": [], "offset": [], "length": []}
             resource = Connector(db, "resource")
             resource.load(resource_id)
+            if resource.values["split"] == 1:
+                continue
             code = zlib.decompress(resource.values["file"])
             failed = False
             if resource.values["type"] == "frame":
@@ -365,10 +369,10 @@ if __name__ == '__main__':
     logger.info("Enqueuing work")
     work_queue = Queue()
     queue_lock = Lock()
-    last_inserted_id = -1
-    for result in results:
+    last_inserted_id = results[-1]["id"]
+
+    for result in shuffle(results):
         work_queue.put(result["id"])
-        last_inserted_id = result["id"]
 
     # Inhibit signals on workers
     original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -388,15 +392,15 @@ if __name__ == '__main__':
                 rq += " AND id > %d" % last_inserted_id
                 rq += " ORDER BY id"
                 results = database.custom(rq)
-                for result in results:
+                last_inserted_id = results[-1]["id"]
+                for result in shuffle(results):
                     queue_lock.acquire()
                     work_queue.put(result["id"])
                     queue_lock.release()
-                    last_inserted_id = result["id"]
         except KeyboardInterrupt:
             logger.info("Caught KeyboardInterrupt, cleaning work queue and terminating workers")
             queue_lock.acquire()
-            while not work_queue.empty:
+            while not work_queue.empty():
                 garbage = work_queue.get(False)
             queue_lock.release()
             # Wait two minutes for workers to end their job
