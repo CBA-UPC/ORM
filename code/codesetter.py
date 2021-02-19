@@ -303,7 +303,7 @@ def main(process):
         except Exception as e:
             logger.error("%s (proc. %d)" % (str(e), process))
         else:
-            logger.info('[Pending: %d] Resource %d (proc: %d)' % (pending, resource_id, process))
+            logger.info('Resource %d [Pending: %d] (proc: %d)' % (resource_id, pending, process))
             ast_data = {"subtrees": [], "ongoing": [], "offset": [], "length": []}
             resource = Connector(db, "resource")
             resource.load(resource_id)
@@ -323,7 +323,7 @@ def main(process):
                         logger.error('Could not compute AST for %s (proc %d)' % (resource.values["hash"], process))
             if failed:
                 continue
-            logger.debug('%d subtrees (proc: %d)' % (len(ast_data["subtrees"]), process))
+            logger.info('%d subtrees (proc: %d)' % (len(ast_data["subtrees"]), process))
             compute_codesets(resource, ast_data)
             resource.values["split"] = 1
             resource.save()
@@ -402,14 +402,12 @@ if __name__ == '__main__':
                     work_queue.put(result["id"])
                     queue_lock.release()
         except KeyboardInterrupt:
-            logger.info("Caught KeyboardInterrupt, cleaning work queue...")
+            logger.info("Caught KeyboardInterrupt, cleaning work queue and terminating workers")
             queue_lock.acquire()
             while not work_queue.empty():
                 garbage = work_queue.get(False)
             queue_lock.release()
             # Wait two minutes for workers to end their job
-            logger.info("Waiting 120 seconds to give workers time to finish.")
             time.sleep(120)
-            logger.info("Closing pool and finishing process.")
             pool.terminate()
             database.close()
