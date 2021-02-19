@@ -289,7 +289,6 @@ def main(process):
     # Load the DB manager for this process
     db = Db()
 
-
     while True:
         try:
             queue_lock.acquire()
@@ -327,6 +326,7 @@ def main(process):
             compute_codesets(resource, ast_data)
             resource.values["split"] = 1
             resource.save()
+    logger.info('proc. %d exiting' % process)
     db.close()
     return 1
 
