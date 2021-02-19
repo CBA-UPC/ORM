@@ -393,8 +393,6 @@ if __name__ == '__main__':
                 rq += " AND id > %d" % last_inserted_id
                 rq += " ORDER BY id"
                 results = database.custom(rq)
-                if len(results) == 0:
-                    continue
                 last_inserted_id = results[-1]["id"]
                 shuffle(results)
                 for result in results:
