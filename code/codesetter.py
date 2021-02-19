@@ -289,19 +289,20 @@ def main(process):
     db = Db()
 
     remaining = True
-    while True:
+    while remaining:
         try:
             queue_lock.acquire()
             resource_id = work_queue.get(False)
+            current = work_queue.qsize() + 1
             queue_lock.release()
         except queue.Empty:
             queue_lock.release()
-            logger.info("Queue empty. Waiting for work (proc. %d)" % process)
-            time.sleep(1)
+            logger.info("Queue empty. (proc. %d)" % process)
+            remaining = False
         except Exception as e:
             logger.error("%s (proc. %d)" % (str(e), process))
         else:
-            logger.info('Resource %d (proc: %d)' % (resource_id, process))
+            logger.info('Job [%d/%d] Resource %s (proc: %d)' % (total - current, total, resource_id, process))
             ast_data = {"subtrees": [], "ongoing": [], "offset": [], "length": []}
             resource = Connector(db, "resource")
             resource.load(resource_id)
@@ -319,7 +320,7 @@ def main(process):
                         logger.error('Could not compute AST for %s (proc %d)' % (resource.values["hash"], process))
             if failed:
                 continue
-            logger.info('%d subtrees (proc: %d)' % (len(ast_data["subtrees"]), process))
+            logger.debug('%d subtrees (proc: %d)' % (len(ast_data["subtrees"]), process))
             compute_codesets(resource, ast_data)
             resource.values["split"] = 1
             resource.save()
@@ -356,6 +357,10 @@ if __name__ == '__main__':
     logger.info("Getting work")
     database = Db()
     rq = 'SELECT id FROM resource WHERE split = 0 AND type IS NOT NULL AND size > 0 AND type IN ("frame", "script")'
+    if args.start > 0:
+        rq += " AND id > %d" % (args.start - 1)
+    if args.end > 0:
+        rq += " AND id < %d" % (args.end + 1)
     rq += ' ORDER BY id'
     results = database.custom(rq)
     total = len(results)
@@ -365,41 +370,10 @@ if __name__ == '__main__':
     logger.info("Enqueuing work")
     work_queue = Queue()
     queue_lock = Lock()
-    last_inserted_id = -1
     for result in results:
         work_queue.put(result["id"])
-        last_inserted_id = result["id"]
-
-    # Inhibit signals on workers
-    original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     # Create and call the workers
     logger.info("Opening workers")
     with Pool(processes=threads) as pool:
         pool.map_async(main, [i for i in range(threads)])
-
-        # Restore signal on main thread
-        signal.signal(signal.SIGINT, original_sigint_handler)
-
-        try:
-            while True:
-                time.sleep(1)
-                rq = 'SELECT id FROM resource WHERE split = 0 AND type IS NOT NULL and type IN ("frame", "script")'
-                rq += " AND id > %d" % last_inserted_id
-                rq += " ORDER BY id"
-                results = database.custom(rq)
-                for result in results:
-                    queue_lock.acquire()
-                    work_queue.put(result["id"])
-                    queue_lock.release()
-                    last_inserted_id = result["id"]
-        except KeyboardInterrupt:
-            logger.info("Caught KeyboardInterrupt, cleaning work queue and terminating workers")
-            queue_lock.acquire()
-            while not work_queue.empty:
-                garbage = work_queue.get(False)
-            queue_lock.release()
-            # Wait two minutes for workers to end their job
-            time.sleep(120)
-            pool.terminate()
-            database.close()
