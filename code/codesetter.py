@@ -372,8 +372,9 @@ if __name__ == '__main__':
     queue_lock = Lock()
     for result in results:
         work_queue.put(result["id"])
+    database.close()
 
     # Create and call the workers
     logger.info("Opening workers")
     with Pool(processes=threads) as pool:
-        pool.map_async(main, [i for i in range(threads)])
+        pool.map(main, [i for i in range(threads)])
