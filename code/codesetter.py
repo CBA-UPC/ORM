@@ -253,15 +253,6 @@ def compute_codesets(resource, ast_data):
             codeset.values["tree_nodes"] = int(len(ast_data["subtrees"][j]) / 3)
             if not codeset.save():
                 codeset.load(hash_value)
-        else:
-            codeset.values.pop('tracking_probability', None)
-            codeset.values.pop('dirt_level', None)
-            if codeset.values["insert_date"] > resource.values["insert_date"]:
-                codeset.values["insert_date"] = resource.values["insert_date"]
-            if codeset.values["update_timestamp"] < resource.values["update_timestamp"]:
-                codeset.values["update_timestamp"] = resource.values["update_timestamp"]
-            if not codeset.save():
-                codeset.load(hash_value)
         resource.add(codeset, {"offset": ast_data["offset"][j],
                                "length": ast_data["length"][j],
                                "insert_date": resource.values["insert_date"],

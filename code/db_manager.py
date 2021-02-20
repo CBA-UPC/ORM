@@ -254,8 +254,11 @@ class Db(object):
                         deadlock = 0
                         error = e
                 else:
+                    self.conn.commit()
+                    if log:
+                        logger.debug("REQUEST OK.\n-----------------")
                     cursor.close()
-                    return 0
+                    return -1
             logger.error(request % tuple(values))
             logger.error("SQL ERROR: " + str(error) + "\n-----------------")
             cursor.close()
