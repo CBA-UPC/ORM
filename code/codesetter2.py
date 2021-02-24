@@ -32,7 +32,7 @@ def print_remaining(last_ts, sec, msg):
         result_queue_lock.release()
         sec += int(dif)
         print("", end='\r', flush=True)
-        print('[%s] %s %d' % (utc_now(), msg, result_size), end='', flush=True)
+        print('[%s] %s %05d' % (utc_now(), msg, result_size), end='', flush=True)
         return now, sec
     return last_ts, sec
 
