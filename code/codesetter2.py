@@ -295,10 +295,10 @@ parser.add_argument('-v', dest='verbose', type=int, default=3,
                     help='Verbose: 0=CRITICAL; 1=ERROR; 2=WARNING; 3=INFO; 4=DEBUG (Default: WARNING)')
 
 
-def db_work():
+def db_work(process_number):
     """ Main process in charge of taking results and save them inside the DB. """
 
-    setproctitle("ORM - Data parser process")
+    setproctitle("ORM - Data parser process %d" % process_number)
     finish_signal = False
 
     # Load the DB manager for this process
@@ -306,9 +306,9 @@ def db_work():
     sc = 0
     ts = time.time()
 
-    max_items = 100
+    max_items = 1000
     while not finish_signal:
-        ts, sc = print_remaining(ts, sc, "[Data parser] Codeset queue size:")
+        ts, sc = print_remaining(ts, sc, "[Data parser %d] Codeset queue size:" % process_number)
         if child_pipe.poll():
             child_pipe.recv()
             finish_signal = True
@@ -327,13 +327,13 @@ def db_work():
 
         resource = Connector(db, "resource")
         for item in item_list:
-            ts, sc = print_remaining(ts, sc, "[Data parser] Codeset queue size:")
+            ts, sc = print_remaining(ts, sc, "[Data parser %d] Codeset queue size:" % process_number)
             # Load the resource if different and mark it as already parsed for codesets
             if "id" not in resource.values.keys() or resource.values["id"] != item["resource_id"]:
                 resource.load(item["resource_id"])
                 resource.values["split"] = 1
                 resource.save()
-            setproctitle("ORM - Data parser process - Resource %d" % resource.values["id"])
+            setproctitle("ORM - Data parser process %d - Resource %d" % (process_number, resource.values["id"]))
 
             # Load the codeset and save it if non-existent
             codeset = Connector(db, "codeset")
@@ -418,21 +418,18 @@ if __name__ == '__main__':
             threads = available_cpu
     logger.info("[Main process] Workers to run: %d " % threads)
 
-    last_resource_id = -1
     work_queue = Queue()
     result_queue = Queue()
     work_queue_lock = Lock()
     result_queue_lock = Lock()
     parent_pipe, child_pipe = Pipe()
-
-    # Create db worker
-    database_worker = Process(target=db_work)
-    database_worker.start()
+    last_resource_id = -1
 
     # Create and call the workers
     logger.debug("[Main process] Spawning new workers...")
-    with Pool(processes=threads) as pool:
-        p = pool.map_async(work, [i for i in range(threads)])
+    with Pool(processes=int(threads/3) * 2) as pool, Pool(processes=int(threads/3)) as data_pool:
+        dp = data_pool.map_async(db_work, [i for i in range(int(threads/3))])
+        p = pool.map_async(work, [i for i in range(int(threads/3) * 2)])
 
         # Restore signal on main thread
         signal.signal(signal.SIGINT, original_sigint_handler)
@@ -477,9 +474,9 @@ if __name__ == '__main__':
             logger.info("[Main process] Waiting for DB worker to save collected info...")
             parent_pipe.send("Finish")
 
-            # Wait for the db worker to finish
-            parent_pipe.recv()
-            database_worker.join()
+            # Wait for the db workers to finish
+            for i in range(int(threads/3)):
+                parent_pipe.recv()
 
             logger.info("[Main process] Work finished. Bye bye!")
             exit(0)
