@@ -303,8 +303,6 @@ def db_work(process_number):
 
     # Load the DB manager for this process
     db = Db()
-    sc = 0
-    ts = time.time()
 
     max_items = 1000
     while not finish_signal:
@@ -391,6 +389,8 @@ if __name__ == '__main__':
     """ Main process in charge of reading the arguments, filling the work queue and creating the workers."""
 
     setproctitle("ORM - Main process")
+    sc = 0
+    ts = time.time()
     # Inhibit signals on work creation
     original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
 
