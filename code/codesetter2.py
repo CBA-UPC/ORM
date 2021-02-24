@@ -231,7 +231,7 @@ def extract_scripts(code, ast_data, worker_number):
             if not extract_ast(script_code.text, ast_data, worker_number):
                 return False
     except:
-        logger.error("AST parsing failed")
+        logger.warning("AST parsing failed")
         return False
     return True
 
@@ -257,12 +257,12 @@ def extract_ast(code, ast_data, worker_number):
                     logger.debug('[Worker %d] Trying leaf 4' % worker_number)
                     ast = esprima.toDict(esprima.parseModule(code2, tolerant=True, jsx=True, range=True))
                 except Exception as e:
-                    logger.error('[Worker %d] Could not create AST' % worker_number)
+                    logger.warning('[Worker %d] Could not create AST' % worker_number)
                     return False
     try:
         traverse(ast, ast_data)
     except:
-        logger.error('[Worker %d] Could not parse AST' % worker_number)
+        logger.warning('[Worker %d] Could not parse AST' % worker_number)
         return False
     return True
 
@@ -383,12 +383,12 @@ def work(process_number):
             if resource_data["type"] == "frame":
                 if not extract_scripts(code, ast_data, process_number):
                     if not extract_ast(code, ast_data, process_number):
-                        logger.error('[Worker %d] Could not compute AST for %d' % (process_number, resource_data["id"]))
+                        logger.warning('[Worker %d] Could not compute AST for %d' % (process_number, resource_data["id"]))
                         return
             elif resource_data["type"] == "script":
                 if not extract_ast(code, ast_data, process_number):
                     if not extract_scripts(code, ast_data, process_number):
-                        logger.error('[Worker %d] Could not compute AST for %d' % (process_number, resource_data["id"]))
+                        logger.warning('[Worker %d] Could not compute AST for %d' % (process_number, resource_data["id"]))
                         return
             compute_codesets(resource_data, ast_data, process_number)
 
@@ -425,7 +425,7 @@ if __name__ == '__main__':
     logger.info("[Main process] Workers to run: %d " % threads)
 
     work_queue = Queue()
-    result_queue = Queue(maxsize=100000)
+    result_queue = Queue(maxsize=99999)
     work_queue_lock = Lock()
     result_queue_lock = Lock()
     parent_pipe, child_pipe = Pipe()
