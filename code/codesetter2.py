@@ -277,12 +277,20 @@ def compute_codesets(resource, ast_data, worker_number):
         logger.debug("[Worker %d] Hash %s" % (worker_number, hash_value))
         codeset = {"hash": hash_value,
                    "tree_nodes": int(len(ast_data["subtrees"][j]) / 3)}
-        result_queue_lock.acquire()
-        result_queue.put({"codeset": codeset,
-                          "resource_id": resource["id"],
-                          "offset": ast_data["offset"][j],
-                          "length": ast_data["length"][j]})
-        result_queue_lock.release()
+        enqueued = False
+        while not enqueued:
+            try:
+                result_queue_lock.acquire()
+                result_queue.put({"codeset": codeset,
+                                  "resource_id": resource["id"],
+                                  "offset": ast_data["offset"][j],
+                                  "length": ast_data["length"][j]}, block=False)
+            except queue.Full:
+                result_queue_lock.release()
+                time.sleep(1)
+            else:
+                result_queue_lock.release()
+                enqueued = True
         logger.debug("[Worker %d] Subtree %d created" % (worker_number, j))
 
 
