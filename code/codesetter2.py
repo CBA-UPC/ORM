@@ -417,9 +417,9 @@ if __name__ == '__main__':
     logger.info("[Main process] Workers to run: %d " % threads)
 
     work_queue = Queue()
-    result_queue = Queue()
+    result_queue = Queue(maxsize=100000)
     work_queue_lock = Lock()
-    result_queue_lock = Lock(maxsize=100000)
+    result_queue_lock = Lock()
     parent_pipe, child_pipe = Pipe()
     last_resource_id = -1
 
