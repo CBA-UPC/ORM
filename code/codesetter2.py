@@ -6,20 +6,35 @@ import queue
 import zlib
 import time
 import signal
-from multiprocessing import Pool, Queue, cpu_count, Lock, Process
+from multiprocessing import Pool, Queue, cpu_count, Lock, Process, Pipe
 
 import esprima
 from bs4 import BeautifulSoup
+from setproctitle import setproctitle
 
 # Own modules
 from db_manager import Db, Connector
-from utils import hash_string
+from utils import hash_string, utc_now
 
 logging.config.fileConfig('logging.conf')
 
 verbose = {"0": logging.CRITICAL, "1": logging.ERROR, "2": logging.WARNING, "3": logging.INFO, "4": logging.DEBUG}
 
 logger = logging.getLogger("MODULE")
+
+
+def print_remaining(last_ts, sec, msg):
+    now = time.time()
+    dif = now - last_ts
+    if dif > 1:
+        result_queue_lock.acquire()
+        result_size = result_queue.qsize()
+        result_queue_lock.release()
+        sec += int(dif)
+        print("", end='\r', flush=True)
+        print('[%s] %s %d' % (utc_now(), msg, result_size), end='', flush=True)
+        return now, sec
+    return last_ts, sec
 
 
 type_list = {"Program": 998,
@@ -94,7 +109,8 @@ type_list = {"Program": 998,
              "JSXText": 124,
              "JSXClosingElement": 126,
              "JSXExpressionContainer": 127,
-             "Import": 128}
+             "Import": 128,
+             "ImportDefaultSpecifier": 129}
 operator_list = {"++": 200,
                  "--": 201,
                  "+": 202,
@@ -206,59 +222,68 @@ def traverse(node, ast_data):
     end_label(node, ast_data)
 
 
-def extract_scripts(code, ast_data):
+def extract_scripts(code, ast_data, worker_number):
     """ Extract the embedded scripts and calls the function to compute the codesets. """
 
-    soup = BeautifulSoup(code, 'lxml')
-    for script_code in soup.find_all('script', {"src": False}):
-        if not extract_ast(script_code.text, ast_data):
-            return False
+    try:
+        soup = BeautifulSoup(code, 'lxml')
+        for script_code in soup.find_all('script', {"src": False}):
+            if not extract_ast(script_code.text, ast_data, worker_number):
+                return False
+    except:
+        logger.error("AST parsing failed")
+        return False
     return True
 
 
-def extract_ast(code, ast_data):
+def extract_ast(code, ast_data, worker_number):
     """ Computes the codesets for the given code. """
 
     try:
+        logger.debug('[Worker %d] Trying leaf 1' % worker_number)
         ast = esprima.toDict(esprima.parseScript(code, tolerant=True, jsx=True, range=True))
     except Exception as e:
         try:
             code2 = code.decode("utf-8")
+            logger.debug('[Worker %d] Trying leaf 2' % worker_number)
             ast = esprima.toDict(esprima.parseScript(code2, tolerant=True, jsx=True, range=True))
         except Exception as e:
             try:
+                logger.debug('[Worker %d] Trying leaf 3' % worker_number)
                 ast = esprima.toDict(esprima.parseScript(code, tolerant=True, jsx=True, range=True))
             except Exception as e:
                 try:
                     code2 = code.decode("utf-8")
+                    logger.debug('[Worker %d] Trying leaf 4' % worker_number)
                     ast = esprima.toDict(esprima.parseModule(code2, tolerant=True, jsx=True, range=True))
                 except Exception as e:
+                    logger.error('[Worker %d] Could not create AST' % worker_number)
                     return False
-    traverse(ast, ast_data)
+    try:
+        traverse(ast, ast_data)
+    except:
+        logger.error('[Worker %d] Could not parse AST' % worker_number)
+        return False
     return True
 
 
-def compute_codesets(resource, ast_data):
+def compute_codesets(resource, ast_data, worker_number):
     """ Inserts the  resource codesets inside the database. """
 
+    logger.debug("[Worker %d] AST subtrees: %d" % (worker_number, len(ast_data["subtrees"])))
     for j in range(len(ast_data["subtrees"])):
-        #logger.info('Insert codeset %d into database' % j)
+        logger.debug("[Worker %d] Creating subtree %d" % (worker_number, j))
         hash_value = hash_string(ast_data["subtrees"][j])
-        codeset = Connector(resource.db, "codeset")
-        if not codeset.load(hash_value):
-            codeset.values.pop('tracking_probability', None)
-            codeset.values.pop('dirt_level', None)
-            codeset.values["insert_date"] = resource.values["insert_date"]
-            codeset.values["update_timestamp"] = resource.values["update_timestamp"]
-            codeset.values["tree_nodes"] = int(len(ast_data["subtrees"][j]) / 3)
-            if not codeset.save():
-                codeset.load(hash_value)
-        resource.add(codeset, {"offset": ast_data["offset"][j],
-                               "length": ast_data["length"][j],
-                               "insert_date": resource.values["insert_date"],
-                               "update_timestamp": resource.values["update_timestamp"]})
-        resource.db.call("ComputeCodesetDirtLevel", values=[codeset.values["id"]])
-        resource.db.call("ComputeCodesetPopularityLevel", values=[codeset.values["id"]])
+        logger.debug("[Worker %d] Hash %s" % (worker_number, hash_value))
+        codeset = {"hash": hash_value,
+                   "tree_nodes": int(len(ast_data["subtrees"][j]) / 3)}
+        result_queue_lock.acquire()
+        result_queue.put({"codeset": codeset,
+                          "resource_id": resource["id"],
+                          "offset": ast_data["offset"][j],
+                          "length": ast_data["length"][j]})
+        result_queue_lock.release()
+        logger.debug("[Worker %d] Subtree %d created" % (worker_number, j))
 
 
 parser = argparse.ArgumentParser(description='JavaScript parser')
@@ -270,52 +295,106 @@ parser.add_argument('-v', dest='verbose', type=int, default=3,
                     help='Verbose: 0=CRITICAL; 1=ERROR; 2=WARNING; 3=INFO; 4=DEBUG (Default: WARNING)')
 
 
-def main(process):
-    """ Main process in charge of taking work from the queue and extracting info if needed.
+def db_work():
+    """ Main process in charge of taking results and save them inside the DB. """
 
-    While there is remaining work in the queue continuously passes new jobs until its empty.
-    If the 'no-update' argument is false it cleans the previously URL's linked for the current domain. """
+    setproctitle("ORM - Data parser process")
+    finish_signal = False
 
     # Load the DB manager for this process
     db = Db()
+    sc = 0
+    ts = time.time()
 
-    try:
-        queue_lock.acquire()
-        resource_id = work_queue.get(False)
-        queue_lock.release()
-    except queue.Empty:
-        queue_lock.release()
-    except Exception as e:
-        logger.error("[Worker %d] %s" % (process, str(e)))
-    else:
-        logger.info('[Worker %d] Resource %s' % (process, resource_id))
-        ast_data = {"subtrees": [], "ongoing": [], "offset": [], "length": []}
+    max_items = 100
+    while not finish_signal:
+        ts, sc = print_remaining(ts, sc, "[Data parser] Codeset queue size:")
+        if child_pipe.poll():
+            child_pipe.recv()
+            finish_signal = True
+        result_queue_lock.acquire()
+        result_size = result_queue.qsize()
+        if finish_signal:
+            max_items = result_size + 100
+        item_list = []
+        empty = False
+        while len(item_list) < max_items and not empty:
+            try:
+                item_list.append(result_queue.get(False))
+            except queue.Empty:
+                empty = True
+        result_queue_lock.release()
+
         resource = Connector(db, "resource")
-        resource.load(resource_id)
-        code = zlib.decompress(resource.values["file"])
-        failed = False
-        if resource.values["type"] == "frame":
-            if not extract_scripts(code, ast_data):
-                if not extract_ast(code, ast_data):
-                    failed = True
-                    logger.error('Could not compute AST for %s (proc %d)' % (resource.values["hash"], process))
-        elif resource.values["type"] == "script":
-            if not extract_ast(code, ast_data):
-                if not extract_scripts(code, ast_data):
-                    failed = True
-                    logger.error('Could not compute AST for %s (proc %d)' % (resource.values["hash"], process))
-        if failed:
-            return -1
-        logger.debug('%d subtrees (proc: %d)' % (len(ast_data["subtrees"]), process))
-        compute_codesets(resource, ast_data)
-        resource.values["split"] = 1
-        resource.save()
+        for item in item_list:
+            ts, sc = print_remaining(ts, sc, "[Data parser] Codeset queue size:")
+            # Load the resource if different and mark it as already parsed for codesets
+            if "id" not in resource.values.keys() or resource.values["id"] != item["resource_id"]:
+                resource.load(item["resource_id"])
+                resource.values["split"] = 1
+                resource.save()
+            setproctitle("ORM - Data parser process - Resource %d" % resource.values["id"])
+
+            # Load the codeset and save it if non-existent
+            codeset = Connector(db, "codeset")
+            if not codeset.load(item["codeset"]["hash"]):
+                codeset.values.pop("dirt_level")
+                codeset.values.pop("popularity_level")
+                codeset.values["tree_nodes"] = item["codeset"]["tree_nodes"]
+                codeset.values["resources"] = int(codeset.values["resources"]) + 1
+                if resource.values["is_tracking"]:
+                    codeset.values["tracking_resources"] = int(codeset.values["tracking_resources"]) + 1
+                codeset.save()
+            resource.add(codeset, {"offset": item["offset"], "length": item["length"]})
+        if empty:
+            time.sleep(1)
     db.close()
-    return 1
+    child_pipe.send("Finished")
+    return
+
+
+def work(process_number):
+    """ Workers process in charge of taking work from the queue and extracting info if needed.
+
+    While there is work in the queue continuously passes new jobs until its empty. """
+
+    setproctitle("ORM - Worker process #%d" % process_number)
+    # Load the DB manager for this process
+
+    while True:
+        try:
+            work_queue_lock.acquire()
+            resource_data = work_queue.get(False)
+            work_queue_lock.release()
+        except queue.Empty:
+            work_queue_lock.release()
+            time.sleep(1)
+        except Exception as e:
+            logger.error("[Worker %d] %s" % (process_number, str(e)))
+        else:
+            setproctitle("ORM - Worker process #%d - Resource %d" % (process_number, resource_data["id"]))
+            logger.debug('[Worker %d] Resource %s' % (process_number, resource_data["id"]))
+            ast_data = {"subtrees": [], "ongoing": [], "offset": [], "length": []}
+            code = zlib.decompress(resource_data["file"])
+            if resource_data["type"] == "frame":
+                if not extract_scripts(code, ast_data, process_number):
+                    if not extract_ast(code, ast_data, process_number):
+                        logger.error('[Worker %d] Could not compute AST for %d' % (process_number, resource_data["id"]))
+                        return
+            elif resource_data["type"] == "script":
+                if not extract_ast(code, ast_data, process_number):
+                    if not extract_scripts(code, ast_data, process_number):
+                        logger.error('[Worker %d] Could not compute AST for %d' % (process_number, resource_data["id"]))
+                        return
+            compute_codesets(resource_data, ast_data, process_number)
 
 
 if __name__ == '__main__':
     """ Main process in charge of reading the arguments, filling the work queue and creating the workers."""
+
+    setproctitle("ORM - Main process")
+    # Inhibit signals on work creation
+    original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     # Take arguments
     args = parser.parse_args()
@@ -325,60 +404,82 @@ if __name__ == '__main__':
         logger.setLevel(verbose[str(v)])
 
     # If thread parameter is auto get the (total-1) or the available CPU's, whichever is smaller
-    logger.info("Calculating processes...")
+    logger.info("[Main process] Calculating workers...")
     if not threads:
         cpu = cpu_count()
         try:
             available_cpu = len(os.sched_getaffinity(0))
         except Exception as e:
-            logger.warning("Platform not recognized. Getting the maximum CPU's")
+            logger.warning("[Main process] Platform not recognized. Getting the maximum CPU's")
             available_cpu = cpu
         if cpu > 1 and cpu == available_cpu:
             threads = cpu - 1
         else:
             threads = available_cpu
-    logger.info("Processes to run: %d " % threads)
+    logger.info("[Main process] Workers to run: %d " % threads)
 
     last_resource_id = -1
     work_queue = Queue()
-    queue_lock = Lock()
-    processes = []
-    while True:
-        # Insert new work into queue if needed.
-        queue_lock.acquire()
-        qsize = work_queue.qsize()
-        queue_lock.release()
-        if qsize < (2 * threads):
-            logger.info("Main process: Getting work")
-            database = Db()
-            rq = 'SELECT id FROM resource WHERE split = 0 AND size > 0 AND type IN ("frame", "script")'
-            rq += ' AND id > %d' % last_resource_id
-            rq += ' ORDER BY id LIMIT 200'
-            results = database.custom(rq)
-            database.close()
-            # If no new work wait ten seconds and retry
-            if len(results) == 0:
-                logger.info("[Main process] New work not found.")
-                time.sleep(10)
-                continue
+    result_queue = Queue()
+    work_queue_lock = Lock()
+    result_queue_lock = Lock()
+    parent_pipe, child_pipe = Pipe()
 
-            # Initialize job queue
-            last_resource_id = results[-1]["id"]
-            logger.info("Main process: Enqueuing work")
-            queue_lock.acquire()
-            for result in results:
-                work_queue.put(result["id"])
-            queue_lock.release()
+    # Create db worker
+    database_worker = Process(target=db_work)
+    database_worker.start()
 
-        # Initialize process array
-        while len(processes) < threads:
-            processes.append(Process(target=main, args=(len(processes),)))
-            processes[-1].start()
+    # Create and call the workers
+    logger.debug("[Main process] Spawning new workers...")
+    with Pool(processes=threads) as pool:
+        p = pool.map_async(work, [i for i in range(threads)])
 
-        for index in range(len(processes)):
-            process = processes[index]
-            if not process.is_alive():
-                process.join()
-                processes[index] = Process(target=main, args=(index,))
-                processes[index].start()
-        time.sleep(1)
+        # Restore signal on main thread
+        signal.signal(signal.SIGINT, original_sigint_handler)
+
+        try:
+            while True:
+                # Insert new work into queue if needed.
+                work_queue_lock.acquire()
+                qsize = work_queue.qsize()
+                work_queue_lock.release()
+                if qsize < (2 * threads):
+                    logger.debug("[Main process] Getting work")
+                    database = Db()
+                    rq = 'SELECT id, type, file FROM resource WHERE split = 0 AND size > 0 '
+                    rq += ' AND type IN ("frame", "script")'
+                    rq += ' AND id > %d' % last_resource_id
+                    rq += ' ORDER BY id LIMIT 200'
+                    results = database.custom(rq)
+                    database.close()
+                    # If no new work wait ten seconds and retry
+                    if len(results) > 0:
+                        # Initialize job queue
+                        last_resource_id = results[-1]["id"]
+                        logger.debug("[Main process] Enqueuing work")
+                        work_queue_lock.acquire()
+                        for result in results:
+                            work_queue.put({"id": result["id"], "type": result["type"], "file": result["file"]})
+                        work_queue_lock.release()
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logger.info("[Main process] Keyboard interrupt received. Clearing work queue...")
+            remaining = True
+            work_queue_lock.acquire()
+            while remaining:
+                try:
+                    garbage = work_queue.get(False)
+                except queue.Empty:
+                    remaining = False
+            work_queue_lock.release()
+
+            # Tell the db worker to finish when possible
+            logger.info("[Main process] Waiting for DB worker to save collected info...")
+            parent_pipe.send("Finish")
+
+            # Wait for the db worker to finish
+            parent_pipe.recv()
+            database_worker.join()
+
+            logger.info("[Main process] Work finished. Bye bye!")
+            exit(0)
