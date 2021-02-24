@@ -482,8 +482,13 @@ if __name__ == '__main__':
             parent_pipe.send("Finish")
 
             # Wait for the db workers to finish
-            for i in range(int(threads/3)):
-                parent_pipe.recv()
+            finished_processes = []
+            while len(finished_processes) < int(threads/3):
+                ts, sc = print_remaining(ts, sc, "Codeset queue size:")
+                if parent_pipe.poll(1):
+                    worker_number = parent_pipe.recv()
+                    if worker_number not in finished_processes:
+                        finished_processes.append(worker_number)
 
             logger.info("[Main process] Work finished. Bye bye!")
             exit(0)
