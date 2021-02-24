@@ -419,15 +419,15 @@ if __name__ == '__main__':
     work_queue = Queue()
     result_queue = Queue()
     work_queue_lock = Lock()
-    result_queue_lock = Lock()
+    result_queue_lock = Lock(maxsize=100000)
     parent_pipe, child_pipe = Pipe()
     last_resource_id = -1
 
     # Create and call the workers
     logger.debug("[Main process] Spawning new workers...")
-    with Pool(processes=int(threads/2)) as pool, Pool(processes=int(threads/2)) as data_pool:
-        dp = data_pool.map_async(db_work, [i for i in range(int(threads/2))])
-        p = pool.map_async(work, [i for i in range(int(threads/2))])
+    with Pool(processes=int(threads/3) * 2) as pool, Pool(processes=int(threads/3)) as data_pool:
+        dp = data_pool.map_async(db_work, [i for i in range(int(threads/3))])
+        p = pool.map_async(work, [i for i in range(int(threads/3) * 2)])
 
         # Restore signal on main thread
         signal.signal(signal.SIGINT, original_sigint_handler)
