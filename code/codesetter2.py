@@ -308,7 +308,6 @@ def db_work(process_number):
 
     max_items = 1000
     while not finish_signal:
-        ts, sc = print_remaining(ts, sc, "[Data parser %d] Codeset queue size:" % process_number)
         if child_pipe.poll():
             child_pipe.recv()
             finish_signal = True
@@ -327,7 +326,6 @@ def db_work(process_number):
 
         resource = Connector(db, "resource")
         for item in item_list:
-            ts, sc = print_remaining(ts, sc, "[Data parser %d] Codeset queue size:" % process_number)
             # Load the resource if different and mark it as already parsed for codesets
             if "id" not in resource.values.keys() or resource.values["id"] != item["resource_id"]:
                 resource.load(item["resource_id"])
@@ -436,6 +434,7 @@ if __name__ == '__main__':
 
         try:
             while True:
+                ts, sc = print_remaining(ts, sc, "Codeset queue size:")
                 # Insert new work into queue if needed.
                 work_queue_lock.acquire()
                 qsize = work_queue.qsize()
