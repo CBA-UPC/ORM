@@ -313,22 +313,29 @@ def db_work(process_number):
     db = Db()
 
     max_items = 1000
-    while not finish_signal:
+    empty = False
+    while not finish_signal or not empty:
+        # Check parent finish signal
         if child_pipe.poll():
             child_pipe.recv()
             finish_signal = True
+
+        # Get work
         result_queue_lock.acquire()
-        result_size = result_queue.qsize()
-        if finish_signal:
-            max_items = result_size + 100
         item_list = []
-        empty = False
         while len(item_list) < max_items and not empty:
             try:
                 item_list.append(result_queue.get(False))
             except queue.Empty:
                 empty = True
+        else:
+            empty = False
         result_queue_lock.release()
+
+        # If no work wait 1 second and retry
+        if len(item_list) == 0:
+            time.sleep(1)
+            continue
 
         resource = Connector(db, "resource")
         for item in item_list:
@@ -350,8 +357,6 @@ def db_work(process_number):
                     codeset.values["tracking_resources"] = int(codeset.values["tracking_resources"]) + 1
                 codeset.save()
             resource.add(codeset, {"offset": item["offset"], "length": item["length"]})
-        if empty:
-            time.sleep(1)
     db.close()
     child_pipe.send("Finished")
     return
