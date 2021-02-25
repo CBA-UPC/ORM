@@ -267,6 +267,20 @@ def extract_ast(code, ast_data, worker_number):
     return True
 
 
+def enqueue_result(obj):
+    enqueued = False
+    while not enqueued:
+        try:
+            result_queue_lock.acquire()
+            result_queue.put(obj, block=False)
+        except queue.Full:
+            result_queue_lock.release()
+            time.sleep(1)
+        else:
+            result_queue_lock.release()
+            enqueued = True
+
+
 def compute_codesets(resource, ast_data, worker_number):
     """ Inserts the  resource codesets inside the database. """
 
@@ -277,20 +291,8 @@ def compute_codesets(resource, ast_data, worker_number):
         logger.debug("[Worker %d] Hash %s" % (worker_number, hash_value))
         codeset = {"hash": hash_value,
                    "tree_nodes": int(len(ast_data["subtrees"][j]) / 3)}
-        enqueued = False
-        while not enqueued:
-            try:
-                result_queue_lock.acquire()
-                result_queue.put({"codeset": codeset,
-                                  "resource_id": resource["id"],
-                                  "offset": ast_data["offset"][j],
-                                  "length": ast_data["length"][j]}, block=False)
-            except queue.Full:
-                result_queue_lock.release()
-                time.sleep(1)
-            else:
-                result_queue_lock.release()
-                enqueued = True
+        enqueue_result({"codeset": codeset, "resource_id": resource["id"],
+                        "offset": ast_data["offset"][j], "length": ast_data["length"][j]})
         logger.debug("[Worker %d] Subtree %d created" % (worker_number, j))
 
 
@@ -343,8 +345,13 @@ def db_work(process_number):
             if "id" not in resource.values.keys() or resource.values["id"] != item["resource_id"]:
                 resource.load(item["resource_id"])
                 resource.values["split"] = 1
+                if not item["codeset"]:
+                    resource.values["split"] = 2
                 resource.save()
             setproctitle("ORM - Data parser process %d - Resource %d" % (process_number, resource.values["id"]))
+
+            if not item["codeset"]:
+                continue
 
             # Load the codeset and save it if non-existent
             codeset = Connector(db, "codeset")
@@ -389,12 +396,14 @@ def work(process_number):
                 if not extract_scripts(code, ast_data, process_number):
                     if not extract_ast(code, ast_data, process_number):
                         logger.warning('[Worker %d] Could not compute AST for %d' % (process_number, resource_data["id"]))
-                        return
+                        enqueue_result({"codeset": None, "resource_id": resource_data["id"]})
+                        continue
             elif resource_data["type"] == "script":
                 if not extract_ast(code, ast_data, process_number):
                     if not extract_scripts(code, ast_data, process_number):
                         logger.warning('[Worker %d] Could not compute AST for %d' % (process_number, resource_data["id"]))
-                        return
+                        enqueue_result({"codeset": None, "resource_id": resource_data["id"]})
+                        continue
             compute_codesets(resource_data, ast_data, process_number)
 
 
