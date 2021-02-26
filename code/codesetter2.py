@@ -314,30 +314,30 @@ def db_work(process_number):
 
     max_items = 1000
     empty = False
-    try:
-        while not finish_signal or not empty:
-            # Check parent finish signal
-            if child_pipe.poll():
-                child_pipe.recv()
-                finish_signal = True
+    while not finish_signal or not empty:
+        # Check parent finish signal
+        if child_pipe.poll():
+            child_pipe.recv()
+            finish_signal = True
 
-            # Get work
-            result_queue_lock.acquire()
-            item_list = []
-            while len(item_list) < max_items and not empty:
-                try:
-                    item_list.append(result_queue.get(False))
-                except queue.Empty:
-                    empty = True
-            else:
-                empty = False
-            result_queue_lock.release()
+        # Get work
+        result_queue_lock.acquire()
+        item_list = []
+        while len(item_list) < max_items and not empty:
+            try:
+                item_list.append(result_queue.get(False))
+            except queue.Empty:
+                empty = True
+        else:
+            empty = False
+        result_queue_lock.release()
 
-            # If no work wait 1 second and retry
-            if len(item_list) == 0:
-                time.sleep(1)
-                continue
+        # If no work wait 1 second and retry
+        if len(item_list) == 0:
+            time.sleep(1)
+            continue
 
+        try:
             resource = Connector(db, "resource")
             for item in item_list:
                 # Load the resource if different and mark it as already parsed for codesets
@@ -351,8 +351,11 @@ def db_work(process_number):
 
                 if item["codeset"] is None:
                     continue
+        except Exception as e:
+            logger.critical("[DB Worker %d] Crashed #1. Codeset: %s | Error: %s" % (process_number, str(item), str(e)))
 
-                # Load the codeset and save it if non-existent
+        try:
+            # Load the codeset and save it if non-existent
                 codeset = Connector(db, "codeset")
                 if not codeset.load(item["codeset"]["hash"]):
                     codeset.values.pop("dirt_level")
@@ -363,8 +366,8 @@ def db_work(process_number):
                         codeset.values["tracking_resources"] = int(codeset.values["tracking_resources"]) + 1
                     codeset.save()
                 resource.add(codeset, {"offset": item["offset"], "length": item["length"]})
-    except Exception as e:
-        logger.critical("[DB Worker %d] Crashed. Codeset: %s | Error: %s" % (process_number, str(item), str(e)))
+        except Exception as e:
+            logger.critical("[DB Worker %d] Crashed #2. Codeset: %s | Error: %s" % (process_number, str(item), str(e)))
     db.close()
     child_pipe.send("Finished")
     return
