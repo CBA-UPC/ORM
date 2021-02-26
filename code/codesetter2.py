@@ -349,23 +349,18 @@ def db_work(process_number):
                     resource.save()
                 setproctitle("ORM - Data parser process %d - Resource %d" % (process_number, resource.values["id"]))
 
-                if item["codeset"] is None:
-                    continue
-        except Exception as e:
-            logger.critical("[DB Worker %d] Crashed #1. Codeset: %s | Error: %s" % (process_number, str(item), str(e)))
-
-        try:
-            # Load the codeset and save it if non-existent
-                codeset = Connector(db, "codeset")
-                if not codeset.load(item["codeset"]["hash"]):
-                    codeset.values.pop("dirt_level")
-                    codeset.values.pop("popularity_level")
-                    codeset.values["tree_nodes"] = item["codeset"]["tree_nodes"]
-                    codeset.values["resources"] = int(codeset.values["resources"]) + 1
-                    if resource.values["is_tracking"]:
-                        codeset.values["tracking_resources"] = int(codeset.values["tracking_resources"]) + 1
-                    codeset.save()
-                resource.add(codeset, {"offset": item["offset"], "length": item["length"]})
+                if item["codeset"] is not None:
+                    # Load the codeset and save it if non-existent
+                    codeset = Connector(db, "codeset")
+                    if not codeset.load(item["codeset"]["hash"]):
+                        codeset.values.pop("dirt_level")
+                        codeset.values.pop("popularity_level")
+                        codeset.values["tree_nodes"] = item["codeset"]["tree_nodes"]
+                        codeset.values["resources"] = int(codeset.values["resources"]) + 1
+                        if resource.values["is_tracking"]:
+                            codeset.values["tracking_resources"] = int(codeset.values["tracking_resources"]) + 1
+                        codeset.save()
+                    resource.add(codeset, {"offset": item["offset"], "length": item["length"]})
         except Exception as e:
             logger.critical("[DB Worker %d] Crashed #2. Codeset: %s | Error: %s" % (process_number, str(item), str(e)))
     db.close()
