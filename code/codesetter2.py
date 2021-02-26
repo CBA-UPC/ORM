@@ -366,7 +366,7 @@ def db_work(process_number):
                     codeset.save()
                 resource.add(codeset, {"offset": item["offset"], "length": item["length"]})
     except Exception as e:
-        logger.critical("[DB Worker %d] Crashed. Error: %s" % (process_number, str(e)))
+        logger.critical("[DB Worker %d] Crashed. Codeset: %s | Error: %s" % (process_number, str(item), str(e)))
     db.close()
     child_pipe.send("Finished")
     return
