@@ -228,12 +228,10 @@ def extract_scripts(code, ast_data, worker_number):
     try:
         soup = BeautifulSoup(code, 'lxml')
         for script_code in soup.find_all('script', {"src": False}):
-            if not extract_ast(script_code.text, ast_data, worker_number):
-                return False
+            return extract_ast(script_code.text, ast_data, worker_number)
     except:
-        logger.warning("AST parsing failed")
+        logger.warning("[Worker %d] AST parsing failed" % worker_number)
         return False
-    return True
 
 
 def extract_ast(code, ast_data, worker_number):
@@ -346,12 +344,12 @@ def db_work(process_number):
                 if "id" not in resource.values.keys() or resource.values["id"] != item["resource_id"]:
                     resource.load(item["resource_id"])
                     resource.values["split"] = 1
-                    if not item["codeset"]:
+                    if item["codeset"] is None:
                         resource.values["split"] = 2
                     resource.save()
                 setproctitle("ORM - Data parser process %d - Resource %d" % (process_number, resource.values["id"]))
 
-                if not item["codeset"]:
+                if item["codeset"] is None:
                     continue
 
                 # Load the codeset and save it if non-existent
