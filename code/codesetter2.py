@@ -346,10 +346,11 @@ def db_work(process_number):
                     resource.values["split"] = 1
                     if item["codeset"] is None:
                         resource.values["split"] = 2
-                    resource.save()
+                    if not resource.save():
+                        resource.load(item["resource_id"])
                 setproctitle("ORM - Data parser process %d - Resource %d" % (process_number, resource.values["id"]))
-            except Exception as e:
-                logger.critical("[DB Worker %d] Crashed #1. Codeset: %s | Error: %s" % (process_number, str(item), str(e)))
+            except Exception as error:
+                logger.critical("[DB Worker %d] Crashed #1. Codeset: %s | Error: %s" % (process_number, str(item), str(error)))
             try:
                 if item["codeset"] is not None:
                     # Load the codeset and save it if non-existent
@@ -361,10 +362,14 @@ def db_work(process_number):
                         codeset.values["resources"] = int(codeset.values["resources"]) + 1
                         if resource.values["is_tracking"]:
                             codeset.values["tracking_resources"] = int(codeset.values["tracking_resources"]) + 1
-                        codeset.save()
+                        while not codeset.save():
+                            codeset.load(item["codeset"]["hash"])
+                            codeset.values.pop("dirt_level")
+                            codeset.values.pop("popularity_level")
+                            codeset.values["tracking_resources"] = int(codeset.values["tracking_resources"]) + 1
                     resource.add(codeset, {"offset": item["offset"], "length": item["length"]})
-            except Exception as e:
-                logger.critical("[DB Worker %d] Crashed #2. Codeset: %s | Error: %s" % (process_number, str(item), str(e)))
+            except Exception as error:
+                logger.critical("[DB Worker %d] Crashed #2. Codeset: %s | Error: %s" % (process_number, str(item), str(error)))
     db.close()
     child_pipe.send("Finished")
     return
