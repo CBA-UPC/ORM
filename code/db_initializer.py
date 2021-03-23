@@ -394,9 +394,9 @@ def init_tracking():
     tracking.values["intrusion_level"] = 3
     tracking.save()
 
-    tracking = Connector(database, "Tracking")
+    tracking = Connector(database, "tracking")
     tracking.load(hash_string("Mouse tracking"))
-    tracking.values["name"] = "mouse tracking"
+    tracking.values["name"] = "Mouse tracking"
     tracking.values["intrusion_level"] = 3
     tracking.save()
 
@@ -422,6 +422,7 @@ if __name__ == '__main__':
     database = Db()
     init_plugins()
     init_types()
+    init_tracking()
     database.initialize(sites, start, timestamp)
     database.close()
 
