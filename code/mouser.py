@@ -241,7 +241,7 @@ def main(process):
         else:
             if args.url:
                 logger.info('Job [%d/%d] Resource %s (proc: %d)' % (total - current, total, element_id, process))
-                url = Connector(db, "resource")
+                url = Connector(db, "url")
                 url.load(element_id)
                 for domain in tracking_domains:
                     if re.search(domain, url.values["url"]):
