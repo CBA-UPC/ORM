@@ -249,7 +249,7 @@ def main(process):
                 if tracker:
                     logger.debug('Found mouse tracking at resource %d (proc: %d)' % (resource_id, process))
                     tracking = Connector(db, "tracking")
-                    tracking.load(hash_string("Mouse"))
+                    tracking.load(hash_string("Mouse tracking"))
                     resource.add(tracking)
             os.remove(tmp_filename)
     db.close()
