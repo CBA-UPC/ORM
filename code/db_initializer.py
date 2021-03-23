@@ -379,6 +379,28 @@ def init_types():
     mime_type.save()
 
 
+def init_tracking():
+    """ Initializes the default types """
+
+    tracking = Connector(database, "tracking")
+    tracking.load(hash_string("Cookies"))
+    tracking.values["name"] = "Cookies"
+    tracking.values["intrusion_level"] = 1
+    tracking.save()
+
+    tracking = Connector(database, "tracking")
+    tracking.load(hash_string("Canvas fingerprinting"))
+    tracking.values["name"] = "Canvas fingerprinting"
+    tracking.values["intrusion_level"] = 3
+    tracking.save()
+
+    tracking = Connector(database, "Tracking")
+    tracking.load(hash_string("Mouse tracking"))
+    tracking.values["name"] = "mouse tracking"
+    tracking.values["intrusion_level"] = 3
+    tracking.save()
+
+
 parser = argparse.ArgumentParser(description='Initializes the ORM database')
 parser.add_argument('start', type=int, default=0, help='Start index (0 indexed)')
 parser.add_argument('end', type=int, help='End index (not included)', nargs='?')
