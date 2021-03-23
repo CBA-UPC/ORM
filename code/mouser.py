@@ -1,4 +1,5 @@
 import os
+import re
 import mmap
 import argparse
 import logging.config
@@ -18,6 +19,9 @@ logger = logging.getLogger("MODULE")
 
 mouseEvents = ["scroll", "click", "dbclick", "drag", "dragend", "dragstart", "dragleave", "dragover", "drop", "mousedown",
                "mouseenter", "mouseleave", "mousemove", "mouseover", "mouseout", "mouseup", "mousewheel", "wheel"]
+
+tracking_domains = ["clicktale.com", "clicktale.net", "etracker.com", "clickmap.ch", "script.crazyegg.com",
+                    "tracking.crazyegg.com", "hotjar.com", "mouseflow.com"]
 
 
 def find_end(javascript_file, a, ini_label, end_label):
@@ -209,6 +213,7 @@ parser.add_argument('-start', dest='start', type=int, default=0, help='Start ind
 parser.add_argument('-end', dest='end', type=int, default=-1, help='End index (Default: Last)', nargs='?')
 parser.add_argument('-v', dest='verbose', type=int, default=3,
                     help='Verbose: 0=CRITICAL; 1=ERROR; 2=WARNING; 3=INFO; 4=DEBUG (Default: WARNING)')
+parser.add_argument('--url', dest='url', action='store_true', help='Look for url patterns instead js files')
 
 
 def main(process):
@@ -224,7 +229,7 @@ def main(process):
     while remaining:
         try:
             queue_lock.acquire()
-            resource_id = work_queue.get(False)
+            element_id = work_queue.get(False)
             current = work_queue.qsize() + 1
             queue_lock.release()
         except queue.Empty:
@@ -234,24 +239,35 @@ def main(process):
         except Exception as e:
             logger.error("%s (proc. %d)" % (str(e), process))
         else:
-            logger.info('Job [%d/%d] Resource %s (proc: %d)' % (total - current, total, resource_id, process))
-            resource = Connector(db, "resource")
-            resource.load(resource_id)
-            code = zlib.decompress(resource.values["file"])
-            tmp_filename = os.path.join(os.path.abspath("."), "tmp", "temp_file_%d.js" % process)
-            with open(tmp_filename, "wb") as js_file:
-                js_file.write(code)
-            try:
-                tracker = scan(tmp_filename)
-            except UnicodeDecodeError as e:
-                print("Probably not an UTF-8 file")
+            if args.url:
+                logger.info('Job [%d/%d] Resource %s (proc: %d)' % (total - current, total, element_id, process))
+                url = Connector(db, "resource")
+                url.load(element_id)
+                for domain in tracking_domains:
+                    if re.search(domain, url.values["url"]):
+                        logger.debug('Found mouse tracking at url %d (proc: %d)' % (element_id, process))
+                        tracking = Connector(db, "tracking")
+                        tracking.load(hash_string("Mouse tracking"))
+                        url.add(tracking)
             else:
-                if tracker:
-                    logger.debug('Found mouse tracking at resource %d (proc: %d)' % (resource_id, process))
-                    tracking = Connector(db, "tracking")
-                    tracking.load(hash_string("Mouse tracking"))
-                    resource.add(tracking)
-            os.remove(tmp_filename)
+                logger.info('Job [%d/%d] Resource %s (proc: %d)' % (total - current, total, element_id, process))
+                resource = Connector(db, "resource")
+                resource.load(element_id)
+                code = zlib.decompress(resource.values["file"])
+                tmp_filename = os.path.join(os.path.abspath("."), "tmp", "temp_file_%d.js" % process)
+                with open(tmp_filename, "wb") as js_file:
+                    js_file.write(code)
+                try:
+                    tracker = scan(tmp_filename)
+                except UnicodeDecodeError as e:
+                    print("Probably not an UTF-8 file")
+                else:
+                    if tracker:
+                        logger.debug('Found mouse tracking at resource %d (proc: %d)' % (element_id, process))
+                        tracking = Connector(db, "tracking")
+                        tracking.load(hash_string("Mouse tracking"))
+                        resource.add(tracking)
+                os.remove(tmp_filename)
     db.close()
     return 1
 
@@ -281,10 +297,13 @@ if __name__ == '__main__':
             threads = available_cpu
     logger.info("Processes to run: %d " % threads)
 
-    # Get domains between the given range from the database.
     logger.info("Getting work")
     database = Db()
+    # Get resources between the given range from the database.
     rq = 'SELECT id FROM resource WHERE size > 0 AND type = "script"'
+    if args.url:
+        # Get urls between the given range from the database.
+        rq = 'SELECT id FROM url WHERE id >= 0'
     if args.start > 0:
         rq += " AND id > %d" % (args.start - 1)
     if args.end > 0:
