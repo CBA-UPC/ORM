@@ -144,18 +144,14 @@ if __name__ == '__main__':
     logger.info("Getting work")
     database = Db()
     rq = "SELECT DISTINCT domain_id AS id FROM QoE"
+    if no_update:
+        rq += " WHERE domain_id NOT IN (SELECT DISTINCT domain_id FROM QoE WHERE plugin_id > 5)"
+    else:
+        rq += " WHERE domain_id >= 0"
     if args.start > 0:
-        rq += " WHERE domain_id > %d" % (args.start - 1)
-        if args.end > 0:
-            rq += " AND domain_id < %d" % (args.end + 1)
-        if no_update:
-            rq += " AND plugin_id != 6"
-    elif args.end > 0:
-        rq += " WHERE domain_id < %d" % (args.end + 1)
-        if no_update:
-            rq += " AND plugin_id != 6"
-    elif no_update:
-        rq += " WHERE plugin_id != 6"
+        rq += " AND domain_id >= %d" % args.start
+    if args.end > 0:
+        rq += " AND domain_id < %d" % (args.end + 1)
     rq += " ORDER BY domain_id"
     results = database.custom(rq)
     total = len(results)
