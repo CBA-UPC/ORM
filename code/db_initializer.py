@@ -71,7 +71,7 @@ def init_plugins():
     plugin.values["enabled"] = 1
     plugin.save()
 
-    # Ghostery
+    # Deep Tracker Blocker
     plugin.load(hash_string('Deep Tracker Blocker'))
     plugin.values["name"] = "Deep Tracker Blocker"
     plugin.values["path"] = "../assets/plugin/deep_tracker_blocker/DTB_0.9.crx"

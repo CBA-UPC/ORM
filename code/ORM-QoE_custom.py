@@ -64,7 +64,7 @@ def main(process):
 
     # Load enabled plugins
     plugin = Connector(db, "plugin")
-    plugin.load(6)
+    plugin.load(8)
 
     # Load the selenium driver with proper plugins
     driver, port = build_driver(plugin, cache, process)
