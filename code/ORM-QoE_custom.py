@@ -103,7 +103,7 @@ def main(process):
                 else:
                     total_cleared += 1
                 if total_failed > repetitions - 5:
-                    db.custom("DELETE from QoE WHERE domain_id = %d" % domain.values["id"])
+                    db.custom("DELETE from QoE WHERE domain_id = %d AND plugin_id = 8" % domain.values["id"])
                     break
             # work_queue.task_done()
     db.close()
@@ -145,7 +145,7 @@ if __name__ == '__main__':
     database = Db()
     rq = "SELECT DISTINCT domain_id AS id FROM QoE"
     if no_update:
-        rq += " WHERE domain_id NOT IN (SELECT DISTINCT domain_id FROM QoE WHERE plugin_id > 5)"
+        rq += " WHERE domain_id NOT IN (SELECT DISTINCT domain_id FROM QoE WHERE plugin_id = 8)"
     else:
         rq += " WHERE domain_id >= 0"
     if args.start > 0:

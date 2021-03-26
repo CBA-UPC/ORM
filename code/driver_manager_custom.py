@@ -150,8 +150,10 @@ def visit_site(db, process, driver, port, domain, plugin, temp_folder, cache):
 
     shutil.rmtree(trace_path)
     if failed:
-        driver, port = reset_browser(driver, process, plugin, cache)
-        return driver, failed
+        # Next lines are usually inside the if
+        pass
+    driver, port = reset_browser(driver, process, plugin, cache)
+    return driver, failed
 
     # Open it again to "infer" the theoretical performance blocking urls using a list instead de DL model
     fake_plugin = Connector(db, "plugin")
