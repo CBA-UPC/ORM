@@ -48,6 +48,7 @@ def insert_url(db, request, insert_ts, update_ts):
     url = Connector(db, "url")
     resource_type = Connector(db, "type")
     if not resource_type.load(hash_string(request["type"])):
+        resource_type.values["name"] = request["type"]
         if not resource_type.save():
             resource_type.load(hash_string(request["type"]))
     components = extract_components(request["url"])
