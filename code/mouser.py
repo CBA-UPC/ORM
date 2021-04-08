@@ -99,6 +99,9 @@ def scan(javascript_file):
                 a = f.tell()
                 if f.read(1) != " ":
                     f.seek(a)
+                a = f.tell()
+                if f.read(1) != "(":
+                    f.seek(a)
                 name = ""
                 if f.read(len("function(")) == "function(":
                     point = f.tell()
@@ -120,7 +123,7 @@ def scan(javascript_file):
                     find = "function " + name
                     b.extend(map(ord, find))
                     try:
-                        point = s.find(b)
+                        point = s.rfind(b)
                     except OverflowError as err:
                         print("File too large")
                     if point != -1:
@@ -137,6 +140,9 @@ def scan(javascript_file):
                     pos_aux = f.tell()
                     if f.read(1) != " ":
                         f.seek(pos_aux)
+                    a = f.tell()
+                    if f.read(1) != "(":
+                        f.seek(a)
                     if f.read(len("function(")) == "function(":
                         pos = find_end(javascript_file, pos_aux, "{", "}")
                         done = done or ret_post(javascript_file, pos_aux, pos)
@@ -161,7 +167,7 @@ def scan(javascript_file):
                             find1 = "function " + name
                             c.extend(map(ord, find))
                             try:
-                                point = s.find(c)
+                                point = s.rfind(c)
                             except OverflowError as err:
                                 print("File too large")
                             if point != -1:
@@ -218,7 +224,6 @@ parser.add_argument('--url', dest='url', action='store_true', help='Look for url
 
 def main(process):
     """ Main process in charge of taking work from the queue and extracting info if needed.
-
     While there is remaining work in the queue continuously passes new jobs until its empty.
     If the 'no-update' argument is false it cleans the previously URL's linked for the current domain. """
 
