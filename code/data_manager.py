@@ -165,6 +165,7 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                         url.values["resource_id"] = resource.values["id"]
                         url.save()
                 resource.values["update_timestamp"] = t
+                resource.values["pending_update"] = 1
                 if elem["blocked"]:
                     resource.values["is_tracking"] = 1
                 if resource.values["hash"] and not resource.values["file"]:
@@ -192,7 +193,7 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                 # Update the most probable type of the resource:
                 # --- Different URLs pointing to the same resource can mark it as different types.
                 # --- We set the most prevalent one
-                db.call("ComputeResourceType", values=[resource.values["id"]])
+                #db.call("ComputeResourceType", values=[resource.values["id"]])
                 # TODO: Fix the popularity update DB procedure
                 #db.call("ComputeResourcePopularityLevel", values=[resource.values["id"]])
 

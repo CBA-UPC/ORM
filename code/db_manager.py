@@ -82,7 +82,7 @@ from utils import hash_string
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger("DB_MANAGER")
 
-CROSS_TABLES = ["domain_url", "resource_fingerprint", "resource_codeset"]
+CROSS_TABLES = ["domain_url", "resource_fingerprint", "resource_codeset", "resource_tracking", "url_tracking"]
 
 
 class Db(object):
@@ -92,12 +92,18 @@ class Db(object):
     make easier the data management.
     """
 
-    def __init__(self):
-        self.host = config.MYSQL_HOST
-        self.user = config.MYSQL_USER
-        self.password = config.MYSQL_PASSWORD
-        self.db = config.MYSQL_DB
-        self.conn = MySQLdb.connect(host=self.host, user=self.user, passwd=self.password, db=self.db,
+    def __init__(self,
+                 host=config.MYSQL_HOST,
+                 port=config.MYSQL_PORT,
+                 user=config.MYSQL_USER,
+                 password=config.MYSQL_PASSWORD,
+                 db=config.MYSQL_DB):
+        self.host = host
+        self.port = port
+        self.user = user
+        self.password = password
+        self.db = db
+        self.conn = MySQLdb.connect(host=self.host, port=self.port, user=self.user, passwd=self.password, db=self.db,
                                     use_unicode=True, charset='utf8mb4')
 
     def close(self):
