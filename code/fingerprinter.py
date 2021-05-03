@@ -74,18 +74,40 @@ def beautify_code(process, code, headers):
 def extract_scripts(process, resource, folder, headers):
     """ Extract the embedded scripts and calls the function to insert fingerprints into the database. """
 
-    page_source = zlib.decompress(resource.values["file"])
-    script_type = Connector(resource.db, "type")
-    script_type.load("Script")
-    soup = BeautifulSoup(page_source, 'lxml')
-    for script_code in soup.find_all('script', {"src": False}):
-        temp_filename = os.path.join(os.path.abspath("."), folder, resource.values["hash"] + ".tmp")
-        os.makedirs(os.path.join(os.path.abspath("."), folder), exist_ok=True)
-        code = script_code.text
-        code = beautify_code(process, code, headers)
-        with open(temp_filename, 'wb') as f:
-            f.write(code.encode('utf-8'))
-        compute_fingerprints(resource, temp_filename)
+    try:
+        page_source = zlib.decompress(resource.values["file"])
+        script_type = Connector(resource.db, "type")
+        script_type.load("Script")
+        soup = BeautifulSoup(page_source, 'lxml')
+        for script_code in soup.find_all('script', {"src": False}):
+            temp_filename = os.path.join(os.path.abspath("."), folder, resource.values["hash"] + ".tmp")
+            os.makedirs(os.path.join(os.path.abspath("."), folder), exist_ok=True)
+            code = script_code.text
+            code = beautify_code(process, code, headers)
+            with open(temp_filename, 'wb') as f:
+                f.write(code.encode('utf-8'))
+            compute_fingerprints(resource, temp_filename)
+    except:
+        logger.info('[Worker %d] Could not parse HTML. Assuming JavaScript' % process)
+        try:
+            url_headers = None
+            request = "SELECT id FROM url WHERE resource_id = %d AND response_headers IS NOT NULL LIMIT 1" % resource.values["id"]
+            res = resource.db.custom(request)
+            for r in res:
+                url = Connector(resource.db, "url")
+                url.load(r["id"])
+                url_headers = literal_eval(url.values["response_headers"])
+            code = zlib.decompress(resource.values["file"])
+            code = beautify_code(process, code, url_headers)
+            os.makedirs(os.path.join(os.path.abspath("."), temp_folder), exist_ok=True)
+            temp_filename = os.path.join(os.path.abspath("."), temp_folder, resource.values["hash"] + ".tmp")
+            with open(temp_filename, 'wb') as f:
+                f.write(code.encode('utf-8', 'replace'))
+            compute_fingerprints(resource, temp_filename)
+        except:
+            logger.warning('[Worker %d] Could not compute fingerprint' % process)
+        return False
+    return True
 
 
 def compute_fingerprints(resource, temp_filename):
@@ -104,8 +126,8 @@ def compute_fingerprints(resource, temp_filename):
             if not fingerprint.save():
                 fingerprint.load(fp)
         resource.add(fingerprint, {"offset": fingerprints[j][0], "length": fingerprints[j][1]})
-        resource.db.call("ComputeFingerprintDirtLevel", values=[fingerprint.values["id"]])
-        resource.db.call("ComputeFingerprintPopularityLevel", values=[fingerprint.values["id"]])
+        #resource.db.call("ComputeFingerprintDirtLevel", values=[fingerprint.values["id"]])
+        #resource.db.call("ComputeFingerprintPopularityLevel", values=[fingerprint.values["id"]])
     os.remove(temp_filename)
 
 
@@ -156,18 +178,9 @@ def main(process):
                 url.load(r["id"])
                 url_headers = literal_eval(url.values["response_headers"])
 
-            if resource.values["type"] == "frame":
-                extract_scripts(process, resource, temp_folder, url_headers)
-            else:
-                code = zlib.decompress(resource.values["file"])
-                code = beautify_code(process, code, url_headers)
-                os.makedirs(os.path.join(os.path.abspath("."), temp_folder), exist_ok=True)
-                temp_filename = os.path.join(os.path.abspath("."), temp_folder, resource.values["hash"] + ".tmp")
-                with open(temp_filename, 'wb') as f:
-                    f.write(code.encode('utf-8', 'replace'))
-                compute_fingerprints(resource, temp_filename)
-            resource.values["fingerprinted"] = 1
-            resource.save()
+            if extract_scripts(process, resource, temp_folder, url_headers):
+                resource.values["fingerprinted"] = 1
+                resource.save()
     db.close()
     return 1
 
