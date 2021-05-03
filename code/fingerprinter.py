@@ -76,8 +76,6 @@ def extract_scripts(process, resource, folder, headers):
 
     try:
         page_source = zlib.decompress(resource.values["file"])
-        script_type = Connector(resource.db, "type")
-        script_type.load("Script")
         soup = BeautifulSoup(page_source, 'lxml')
         for script_code in soup.find_all('script', {"src": False}):
             temp_filename = os.path.join(os.path.abspath("."), folder, resource.values["hash"] + ".tmp")
@@ -96,7 +94,7 @@ def extract_scripts(process, resource, folder, headers):
             for r in res:
                 url = Connector(resource.db, "url")
                 url.load(r["id"])
-                url_headers = literal_eval(url.values["response_headers"])
+                url_headers = url.values["response_headers"]
             code = zlib.decompress(resource.values["file"])
             code = beautify_code(process, code, url_headers)
             os.makedirs(os.path.join(os.path.abspath("."), temp_folder), exist_ok=True)
@@ -214,12 +212,13 @@ if __name__ == '__main__':
     # Get domains between the given range from the database.
     logger.info("Getting work")
     database = Db()
-    rq = "SELECT resource.id FROM resource WHERE fingerprinted = 0"
+    rq = 'SELECT id, type, file FROM resource WHERE split = 0 AND size > 0 '
+    rq += ' AND type IN ("frame", "script")'
     if args.start > 0:
-        rq += " AND resource.id > %d" % (args.start - 1)
+        rq += " AND id > %d" % (args.start - 1)
     if args.end > 0:
-        rq += " AND resource.id < %d" % (args.end + 1)
-    rq += " ORDER BY resource.id"
+        rq += " AND id < %d" % (args.end + 1)
+    rq += ' ORDER BY id'
     results = database.custom(rq)
     total = len(results)
     logger.info("Gotten %d jobs to enqueue" % total)
