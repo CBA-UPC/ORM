@@ -85,7 +85,8 @@ def extract_scripts(process, resource, folder, headers):
             with open(temp_filename, 'wb') as f:
                 f.write(code.encode('utf-8'))
             compute_fingerprints(resource, temp_filename)
-    except:
+    except Exception as e:
+        logger.error('[Worker %d] Error. %s' % (process, str(e)))
         logger.info('[Worker %d] Could not parse HTML. Assuming JavaScript' % process)
         try:
             url_headers = None
@@ -102,7 +103,8 @@ def extract_scripts(process, resource, folder, headers):
             with open(temp_filename, 'wb') as f:
                 f.write(code.encode('utf-8', 'replace'))
             compute_fingerprints(resource, temp_filename)
-        except:
+        except Exception as e:
+            logger.error('[Worker %d] Error. %s' % (process, str(e)))
             logger.warning('[Worker %d] Could not compute fingerprint' % process)
             return False
     return True
