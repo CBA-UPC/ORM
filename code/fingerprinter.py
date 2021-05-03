@@ -104,7 +104,7 @@ def extract_scripts(process, resource, folder, headers):
             compute_fingerprints(resource, temp_filename)
         except:
             logger.warning('[Worker %d] Could not compute fingerprint' % process)
-        return False
+            return False
     return True
 
 
