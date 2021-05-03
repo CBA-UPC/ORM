@@ -212,7 +212,7 @@ if __name__ == '__main__':
     # Get domains between the given range from the database.
     logger.info("Getting work")
     database = Db()
-    rq = 'SELECT id, type, file FROM resource WHERE split = 0 AND size > 0 '
+    rq = 'SELECT id, type, file FROM resource WHERE fingerprinted = 0 AND size > 0 '
     rq += ' AND type IN ("frame", "script")'
     if args.start > 0:
         rq += " AND id > %d" % (args.start - 1)
