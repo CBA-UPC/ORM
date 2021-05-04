@@ -71,42 +71,45 @@ def beautify_code(process, code, headers):
     return code
 
 
-def extract_scripts(process, resource, folder, headers):
+def extract_scripts(process, resource, folder):
     """ Extract the embedded scripts and calls the function to insert fingerprints into the database. """
 
-    try:
-        page_source = zlib.decompress(resource.values["file"])
-        soup = BeautifulSoup(page_source, 'lxml')
+    # Prepare the temp folder and file
+    os.makedirs(os.path.join(os.path.abspath("."), folder), exist_ok=True)
+    temp_filename = os.path.join(os.path.abspath("."), folder, resource.values["hash"] + ".tmp")
+    print(temp_filename)
+    print("")
+
+    # Extract the file content
+    page_source = zlib.decompress(resource.values["file"])
+
+    # Get headers to pass to beautify_code
+    url_headers = None
+    request = "SELECT id FROM url WHERE resource_id = %d AND response_headers IS NOT NULL LIMIT 1" % \
+              resource.values["id"]
+    res = resource.db.custom(request)
+    for r in res:
+        url = Connector(resource.db, "url")
+        url.load(r["id"])
+        url_headers = literal_eval(url.values["response_headers"])
+
+    # Read HTML code
+    soup = BeautifulSoup(page_source, 'lxml')
+    # Extract HTML embedded scripts
+    if not soup.find('script', {"src": False}):
+        # No script present -> assuming JS code
+        logger.info('[Worker %d] Could not find <script> tags. Assuming JavaScript file' % process)
+        code = beautify_code(process, page_source, url_headers)
+        with open(temp_filename, 'wb') as f:
+            f.write(code.encode('utf-8', 'replace'))
+        compute_fingerprints(resource, temp_filename)
+    else:
         for script_code in soup.find_all('script', {"src": False}):
-            temp_filename = os.path.join(os.path.abspath("."), folder, resource.values["hash"] + ".tmp")
-            os.makedirs(os.path.join(os.path.abspath("."), folder), exist_ok=True)
             code = script_code.text
-            code = beautify_code(process, code, headers)
+            code = beautify_code(process, code, url_headers)
             with open(temp_filename, 'wb') as f:
                 f.write(code.encode('utf-8'))
             compute_fingerprints(resource, temp_filename)
-    except Exception as e:
-        logger.error('[Worker %d] Error. %s' % (process, str(e)))
-        logger.info('[Worker %d] Could not parse HTML. Assuming JavaScript' % process)
-        try:
-            url_headers = None
-            request = "SELECT id FROM url WHERE resource_id = %d AND response_headers IS NOT NULL LIMIT 1" % resource.values["id"]
-            res = resource.db.custom(request)
-            for r in res:
-                url = Connector(resource.db, "url")
-                url.load(r["id"])
-                url_headers = url.values["response_headers"]
-            code = zlib.decompress(resource.values["file"])
-            code = beautify_code(process, code, url_headers)
-            os.makedirs(os.path.join(os.path.abspath("."), temp_folder), exist_ok=True)
-            temp_filename = os.path.join(os.path.abspath("."), temp_folder, resource.values["hash"] + ".tmp")
-            with open(temp_filename, 'wb') as f:
-                f.write(code.encode('utf-8', 'replace'))
-            compute_fingerprints(resource, temp_filename)
-        except Exception as e:
-            logger.error('[Worker %d] Error. %s' % (process, str(e)))
-            logger.warning('[Worker %d] Could not compute fingerprint' % process)
-            return False
     return True
 
 
@@ -169,16 +172,7 @@ def main(process):
             resource.load(resource_id)
             logger.info('Job [%d/%d] %s (proc: %d)' % (total - current + 1, total, resource.values["hash"], process))
 
-            # Get url headers to pass to Beautiful Soup
-            url_headers = None
-            request = "SELECT id FROM url WHERE resource_id = %d AND response_headers IS NOT NULL LIMIT 1" % resource_id
-            res = db.custom(request)
-            for r in res:
-                url = Connector(db, "url")
-                url.load(r["id"])
-                url_headers = literal_eval(url.values["response_headers"])
-
-            if extract_scripts(process, resource, temp_folder, url_headers):
+            if extract_scripts(process, resource, temp_folder):
                 resource.values["fingerprinted"] = 1
                 resource.save()
     db.close()
