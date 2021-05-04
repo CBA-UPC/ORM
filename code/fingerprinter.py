@@ -77,8 +77,6 @@ def extract_scripts(process, resource, folder):
     # Prepare the temp folder and file
     os.makedirs(os.path.join(os.path.abspath("."), folder), exist_ok=True)
     temp_filename = os.path.join(os.path.abspath("."), folder, resource.values["hash"] + ".tmp")
-    print(temp_filename)
-    print("")
 
     # Extract the file content
     page_source = zlib.decompress(resource.values["file"])
