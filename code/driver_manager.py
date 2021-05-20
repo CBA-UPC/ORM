@@ -130,6 +130,8 @@ def reset_browser(driver, process, plugin, cache):
             driver.close()
         except InvalidSessionIdException as e:
             logger.error("(proc. %d) Error #6: %s" % (process, str(e)))
+        except WebDriverException as e:
+            logger.error("(proc. %d) Error #7: %s" % (process, str(e)))
         driver, port = build_driver(plugin, cache, process)
         while not driver:
             driver, port = build_driver(plugin, cache, process)
