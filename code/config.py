@@ -10,11 +10,11 @@ ALEXA_FILE_PATH = join(PROJECT_DIR, '../assets/alexa/top-1m.csv.zip')
 GEOCITY_FILE_PATH = join(PROJECT_DIR, '../assets/geolocation/GeoLite2-City.mmdb')
 
 
-MYSQL_HOST = 'XXXdatabaseXXX'
-MYSQL_PORT = 3306
-MYSQL_DB = 'ORM'
-MYSQL_USER = 'XXXuserXXX'
-MYSQL_PASSWORD = 'XXXpasswordXXX'
+#MYSQL_HOST = 'XXXdatabaseXXX'
+#MYSQL_PORT = 3306
+#MYSQL_DB = 'ORM'
+#MYSQL_USER = 'XXXuserXXX'
+#MYSQL_PASSWORD = 'XXXpasswordXXX'
 
 
 def load_csv(filename, column):

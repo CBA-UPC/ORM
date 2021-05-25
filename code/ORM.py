@@ -21,8 +21,10 @@
 # Basic modules
 import argparse
 import os
+import time
 import logging.config
 import queue
+from datetime import datetime, timezone, timedelta
 from multiprocessing import Pool, Queue, cpu_count, Lock
 
 # Own modules
@@ -31,6 +33,7 @@ from driver_manager import build_driver, visit_site
 
 # Third-party modules
 from geoip2 import database as geolocation
+from setproctitle import setproctitle
 
 import config
 
@@ -41,8 +44,6 @@ verbose = {"0": logging.CRITICAL, "1": logging.ERROR, "2": logging.WARNING, "3":
 logger = logging.getLogger("ORM")
 
 parser = argparse.ArgumentParser(description='Online Resource Mapper (ORM)')
-parser.add_argument('-start', dest='start', type=int, default=0, help='Start index (Default: First)')
-parser.add_argument('-end', dest='end', type=int, default=-1, help='End index (Default: Last)', nargs='?')
 parser.add_argument('-t', dest='threads', type=int, default=0,
                     help='Number of threads/processes to span (Default: Auto)')
 parser.add_argument('-v', dest='verbose', type=int, default=3,
@@ -51,10 +52,12 @@ parser.add_argument('-d', dest='tmp', type=str, default='tmp',
                     help='Temporary folder (Default: "./tmp"')
 parser.add_argument('--statefull', dest='cache', action="store_true",
                     help='Enables cache/cookies (Default: Clear cache/cookies)')
-parser.add_argument('--no-update', dest='no_update', action="store_true",
-                    help='Not scraps already scraped domains between the selected range (Default: Update)')
+parser.add_argument('-update-threshold', dest='update_threshold', type=int, default=30,
+                    help='Period of days to skip rescanning a website (Default: 30 days).')
 parser.add_argument('--update-ublock', dest='update_ublock', action="store_true",
                     help='Updates uBlock pattern lists every time a new browser is launched (Default: no update)')
+parser.add_argument('--priority-scan', dest='priority', action="store_true",
+                    help='Activates priority scan. This ORM will only scan domains with the priority flag enabled')
 
 
 def main(process):
@@ -85,30 +88,31 @@ def main(process):
     if not driver_list:
         return 1
 
-    remaining = True
-    while remaining:
+    while True:
         try:
             queue_lock.acquire()
             site = work_queue.get(False)
-            current = work_queue.qsize() + 1
             queue_lock.release()
         except queue.Empty:
             queue_lock.release()
-            logger.info("Queue empty (proc. %d)" % process)
-            remaining = False
+            time.sleep(1)
         except Exception as e:
-            logger.error("%s (proc. %d)" % (str(e), process))
+            logger.error("[Worker %d] %s" % (process, str(e)))
         else:
             domain = Connector(db, "domain")
             domain.load(site)
-            logger.info('Job [%d/%d] %s (proc: %d)' % (total - current, total, domain.values["name"], process))
+            setproctitle("ORM - Worker #%d - %s" % (process, domain["name"]))
+            logger.info('[Worker %d] Domain %s' % (process, domain.values["name"]))
             for driver in driver_list:
                 # Clean the domain urls before crawling new info
-                # TODO: Clean the urls/resources that are not used anymore by any domain.
                 url_property = {"plugin_id": driver[1].values['id']}
                 urls = domain.get("url", order="url_id", args=url_property)
                 for url in urls:
                     domain.remove(url)
+                    # TODO: Clean the urls/resources that are not used anymore by any domain.
+                    domain_list = url.get_all("domain")
+                    if len(domain_list) == 0:
+                        url.delete()
                 # Launch the crawl
                 driver[0], completed, repeat = visit_site(db, process, driver[0], domain,
                                                           driver[1], temp_folder, cache, update_ublock, geo_db)
@@ -117,10 +121,13 @@ def main(process):
                     extra_tries -= 1
                     driver[0], completed, repeat = visit_site(db, process, driver[0], domain,
                                                               driver[1], temp_folder, cache, update_ublock, geo_db)
-    db.close()
-    for driver in driver_list:
-        driver[0].close()
-    return 1
+                if not completed:
+                    last_timestamp = datetime.strptime(domain.values["update_timestamp"], '%Y-%m-%d %H:%M:%S')
+                    now = datetime.now(timezone.utc)
+                    td = timedelta(update_threshold)
+                    # TODO: Test the website removal when not .
+                    if last_timestamp < (now + td):
+                        domain.delete()
 
 
 if __name__ == '__main__':
@@ -130,6 +137,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     cache = args.cache
     update_ublock = args.update_ublock
+    update_threshold = args.update_threshold
     no_update = args.no_update
     threads = args.threads
     temp_folder = os.path.join(os.path.abspath("."), args.tmp)
@@ -154,36 +162,36 @@ if __name__ == '__main__':
             threads = available_cpu
     logger.info("Processes to run: %d " % threads)
 
-    # Get domains between the given range from the database.
-    logger.info("Getting work")
-    database = Db()
-    rq = "SELECT domain.id FROM domain"
-    if args.start > 0:
-        rq += " WHERE domain.id > %d" % (args.start - 1)
-        if args.end > 0:
-            rq += " AND domain.id < %d" % (args.end + 1)
-        if no_update:
-            rq += " AND domain.id NOT IN (SELECT DISTINCT(domain_id) FROM domain_url)"
-    elif args.end > 0:
-        rq += " WHERE domain.id < %d" % (args.end + 1)
-        if no_update:
-            rq += " AND domain.id NOT IN (SELECT DISTINCT(domain_id) FROM domain_url)"
-    elif no_update:
-        rq += " WHERE domain.id NOT IN (SELECT DISTINCT(domain_id) FROM domain_url)"
-    rq += " ORDER BY domain.id"
-    results = database.custom(rq)
-    total = len(results)
-    logger.info("Gotten %d jobs to enqueue" % total)
-
     # Initialize job queue
-    logger.info("Enqueuing work")
     work_queue = Queue()
     queue_lock = Lock()
-    process_list = []
-    for result in results:
-        work_queue.put(result["id"])
-    database.close()
 
     # Create and call the workers
+    logger.debug("[Main process] Spawning new workers...")
     with Pool(processes=threads) as pool:
-        pool.map(main, [i for i in range(threads)])
+        p = pool.map_async(main, [i for i in range(int(threads))])
+
+        while True:
+            # Insert new work into queue if needed.
+            queue_lock.acquire()
+            qsize = work_queue.qsize()
+            queue_lock.release()
+            if qsize < (2 * threads):
+                logger.debug("[Main process] Getting work")
+                now = datetime.now(timezone.utc)
+                td = timedelta(update_threshold)
+                period = now + td
+                rq = 'SELECT id FROM domain WHERE update_timestamp < %s' % (period.strftime('%Y-%m-%d %H:%M:%S'))
+                rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (2 * threads)
+                database = Db()
+                results = database.custom(rq)
+                database.close()
+                # If no new work wait ten seconds and retry
+                if len(results) > 0:
+                    # Initialize job queue
+                    logger.debug("[Main process] Enqueuing work")
+                    queue_lock.acquire()
+                    for result in results:
+                        work_queue.put(result["id"])
+                    queue_lock.release()
+            time.sleep(1)
