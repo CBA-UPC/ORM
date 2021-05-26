@@ -7,6 +7,7 @@ from os.path import abspath, dirname, join, splitext
 PROJECT_DIR = abspath(dirname(__file__))
 
 ALEXA_FILE_PATH = join(PROJECT_DIR, '../assets/alexa/top-1m.csv.zip')
+FONT_FILE_PATH = join(PROJECT_DIR, '../assets/fonts/fonts.txt')
 GEOCITY_FILE_PATH = join(PROJECT_DIR, '../assets/geolocation/GeoLite2-City.mmdb')
 
 

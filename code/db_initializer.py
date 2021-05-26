@@ -383,22 +383,84 @@ def init_tracking():
     """ Initializes the default types """
 
     tracking = Connector(database, "tracking")
-    tracking.load(hash_string("Cookies"))
-    tracking.values["name"] = "Cookies"
+    tracking.load(hash_string("Session cookies"))
+    tracking.values["name"] = "Session cookies"
     tracking.values["intrusion_level"] = 1
     tracking.save()
 
     tracking = Connector(database, "tracking")
-    tracking.load(hash_string("Canvas fingerprinting"))
-    tracking.values["name"] = "Canvas fingerprinting"
+    tracking.load(hash_string("Long-living cookies"))
+    tracking.values["name"] = "Long-living cookies"
+    tracking.values["intrusion_level"] = 2
+    tracking.save()
+
+    tracking = Connector(database, "tracking")
+    tracking.load(hash_string("Very long-living cookies"))
+    tracking.values["name"] = "Very long-living cookies"
     tracking.values["intrusion_level"] = 3
+    tracking.save()
+
+    tracking = Connector(database, "tracking")
+    tracking.load(hash_string("JavaScript cookies"))
+    tracking.values["name"] = "JavaScript cookies"
+    tracking.values["intrusion_level"] = 3
+    tracking.save()
+
+    tracking = Connector(database, "tracking")
+    tracking.load(hash_string("Third-party cookies"))
+    tracking.values["name"] = "Third-party cookies"
+    tracking.values["intrusion_level"] = 4
+    tracking.save()
+
+    tracking = Connector(database, "tracking")
+    tracking.load(hash_string("Tracking cookies"))
+    tracking.values["name"] = "Tracking cookies"
+    tracking.values["intrusion_level"] = 5
+    tracking.save()
+
+    tracking = Connector(database, "tracking")
+    tracking.load(hash_string("Font fingerprinting"))
+    tracking.values["name"] = "Font fingerprinting"
+    tracking.values["intrusion_level"] = 4
+    tracking.save()
+
+    tracking = Connector(database, "tracking")
+    tracking.load(hash_string("Canvas fingerprinting (small)"))
+    tracking.values["name"] = "Canvas fingerprinting (small)"
+    tracking.values["intrusion_level"] = 5
+    tracking.save()
+
+    tracking = Connector(database, "tracking")
+    tracking.load(hash_string("Canvas fingerprinting (big)"))
+    tracking.values["name"] = "Canvas fingerprinting (big)"
+    tracking.values["intrusion_level"] = 6
     tracking.save()
 
     tracking = Connector(database, "tracking")
     tracking.load(hash_string("Mouse tracking"))
     tracking.values["name"] = "Mouse tracking"
-    tracking.values["intrusion_level"] = 3
+    tracking.values["intrusion_level"] = 6
     tracking.save()
+
+
+def init_fonts():
+    """ Initializes de font table """
+    with open(config.FONT_FILE_PATH, "r") as f:
+        fonts = f.read()
+    fonts = fonts.split(";")
+    for f in fonts:
+        font = Connector(database, "font")
+        font.load(hash_string(f))
+        font.save()
+
+
+def init_mouse_tracking_domains():
+    tracking_domains = ["clicktale.com", "clicktale.net", "etracker.com", "clickmap.ch",
+                        "script.crazyegg.com", "tracking.crazyegg.com", "hotjar.com", "mouseflow.com"]
+    for tracking_domain in tracking_domains:
+        domain = Connector(database, "mouse_tracking_domain")
+        domain.load(hash_string(tracking_domain))
+        domain.save()
 
 
 parser = argparse.ArgumentParser(description='Initializes the ORM database')
@@ -423,6 +485,7 @@ if __name__ == '__main__':
     init_plugins()
     init_types()
     init_tracking()
+    init_fonts()
+    init_mouse_tracking_domains()
     database.initialize(sites, start, timestamp)
     database.close()
-

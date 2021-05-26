@@ -28,6 +28,7 @@ from datetime import datetime, timezone, timedelta
 from multiprocessing import Pool, Queue, cpu_count, Lock
 
 # Own modules
+from utils import utc_now
 from db_manager import Db, Connector
 from driver_manager import build_driver, visit_site
 
@@ -42,22 +43,6 @@ logging.config.fileConfig('logging.conf')
 verbose = {"0": logging.CRITICAL, "1": logging.ERROR, "2": logging.WARNING, "3": logging.INFO, "4": logging.DEBUG}
 
 logger = logging.getLogger("ORM")
-
-parser = argparse.ArgumentParser(description='Online Resource Mapper (ORM)')
-parser.add_argument('-t', dest='threads', type=int, default=0,
-                    help='Number of threads/processes to span (Default: Auto)')
-parser.add_argument('-v', dest='verbose', type=int, default=3,
-                    help='Verbose: 0=CRITICAL; 1=ERROR; 2=WARNING; 3=INFO; 4=DEBUG (Default: WARNING)')
-parser.add_argument('-d', dest='tmp', type=str, default='tmp',
-                    help='Temporary folder (Default: "./tmp"')
-parser.add_argument('--statefull', dest='cache', action="store_true",
-                    help='Enables cache/cookies (Default: Clear cache/cookies)')
-parser.add_argument('-update-threshold', dest='update_threshold', type=int, default=30,
-                    help='Period of days to skip rescanning a website (Default: 30 days).')
-parser.add_argument('--update-ublock', dest='update_ublock', action="store_true",
-                    help='Updates uBlock pattern lists every time a new browser is launched (Default: no update)')
-parser.add_argument('--priority-scan', dest='priority', action="store_true",
-                    help='Activates priority scan. This ORM will only scan domains with the priority flag enabled')
 
 
 def main(process):
@@ -109,8 +94,7 @@ def main(process):
                 urls = domain.get("url", order="url_id", args=url_property)
                 for url in urls:
                     domain.remove(url)
-                    # TODO: Clean the urls/resources that are not used anymore by any domain.
-                    domain_list = url.get_all("domain")
+                    domain_list = url.get("domain")
                     if len(domain_list) == 0:
                         url.delete()
                 # Launch the crawl
@@ -121,13 +105,27 @@ def main(process):
                     extra_tries -= 1
                     driver[0], completed, repeat = visit_site(db, process, driver[0], domain,
                                                               driver[1], temp_folder, cache, update_ublock, geo_db)
-                if not completed:
-                    last_timestamp = datetime.strptime(domain.values["update_timestamp"], '%Y-%m-%d %H:%M:%S')
-                    now = datetime.now(timezone.utc)
-                    td = timedelta(update_threshold)
-                    # TODO: Test the website removal when not .
-                    if last_timestamp < (now + td):
-                        domain.delete()
+                domain.values["update_timestamp"] = utc_now()
+                domain.save()
+                # TODO: Try to remove websites when unable to get info??
+                #  -> if a connection problem happens all the websites will be removed...
+
+
+parser = argparse.ArgumentParser(description='Online Resource Mapper (ORM)')
+parser.add_argument('-t', dest='threads', type=int, default=0,
+                    help='Number of threads/processes to span (Default: Auto)')
+parser.add_argument('-v', dest='verbose', type=int, default=3,
+                    help='Verbose: 0=CRITICAL; 1=ERROR; 2=WARNING; 3=INFO; 4=DEBUG (Default: WARNING)')
+parser.add_argument('-d', dest='tmp', type=str, default='tmp',
+                    help='Temporary folder (Default: "./tmp"')
+parser.add_argument('--statefull', dest='cache', action="store_true",
+                    help='Enables cache/cookies (Default: Clear cache/cookies)')
+parser.add_argument('-update-threshold', dest='update_threshold', type=int, default=30,
+                    help='Period of days to skip rescanning a website (Default: 30 days).')
+parser.add_argument('--update-ublock', dest='update_ublock', action="store_true",
+                    help='Updates uBlock pattern lists every time a new browser is launched (Default: no update)')
+parser.add_argument('--priority-scan', dest='priority', action="store_true",
+                    help='Activates priority scan. This ORM will only scan domains with the priority flag enabled')
 
 
 if __name__ == '__main__':
@@ -181,7 +179,11 @@ if __name__ == '__main__':
                 now = datetime.now(timezone.utc)
                 td = timedelta(update_threshold)
                 period = now + td
-                rq = 'SELECT id FROM domain WHERE update_timestamp < %s' % (period.strftime('%Y-%m-%d %H:%M:%S'))
+                rq = 'SELECT id FROM domain'
+                if args.priority:
+                    rq += ' WHERE priority = 1'
+                else:
+                    rq += ' WHERE update_timestamp < %s' % (period.strftime('%Y-%m-%d %H:%M:%S'))
                 rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (2 * threads)
                 database = Db()
                 results = database.custom(rq)

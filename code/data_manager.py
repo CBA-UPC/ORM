@@ -32,6 +32,7 @@ from asn1crypto import pem
 
 # Own modules
 from db_manager import Db, Connector
+from tracking_manager import check_tracking
 from utils import download_file, hash_file, lsh_file, hash_string, utc_now
 from utils import certificate_to_json, extract_location
 
@@ -209,6 +210,9 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                                         "initiator_frame": initiator_id,
                                         "insert_date": t,
                                         "update_timestamp": t})
+
+        # Check tracking for the url and related resource
+        check_tracking(url, domain)
 
 
 def download_url(process, url, filename):
