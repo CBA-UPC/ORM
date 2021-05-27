@@ -590,7 +590,7 @@ def get_mouse_fingerprinting(url):
 
 
 def check_tracking(url, domain):
-    """ Checks all the tracking possible for the given url and domain. """
+    """ Checks all the possible tracking for the given url and domain. """
     #print("Entro HTTP cookies")
     get_http_cookies(url, domain)
     #print("Entro JS cookies")
