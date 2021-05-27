@@ -20,7 +20,7 @@
 
 import socket
 import ssl
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from hashlib import sha256
 from urllib.parse import urlparse
 
@@ -44,7 +44,7 @@ except ImportError:
 def utc_now():
     """ Returns the current time in MySQL compatible format. """
 
-    ts = datetime.now(timezone.utc).timestamp()
+    ts = datetime.now(timezone(timedelta(hours=2), name="UTC+2")).timestamp()
     return datetime.utcfromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
 
 

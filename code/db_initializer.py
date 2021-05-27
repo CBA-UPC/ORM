@@ -437,8 +437,8 @@ def init_tracking():
     tracking.save()
 
     tracking = Connector(database, "tracking")
-    tracking.load(hash_string("Mouse tracking"))
-    tracking.values["name"] = "Mouse tracking"
+    tracking.load(hash_string("Mouse fingerprinting"))
+    tracking.values["name"] = "Mouse fingerprinting"
     tracking.values["intrusion_level"] = 6
     tracking.save()
 
@@ -451,6 +451,7 @@ def init_fonts():
     for f in fonts:
         font = Connector(database, "font")
         font.load(hash_string(f))
+        font.values["name"] = f
         font.save()
 
 

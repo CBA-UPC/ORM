@@ -31,15 +31,21 @@ def parse_cookies(cookie_string):
 
     cookie_list = []
     allowed_values = ["expires", "max-age", "domain", "path", "samesite", "secure", "httponly"]
-    cookie_lines = cookie_string.split("\\n")
+    cookie_lines = cookie_string.split("\n")
     for cookie_line in cookie_lines:
+        cookie_line = cookie_line.replace("; ", ";")
         parameters = cookie_line.split(";")
         for parameter in parameters:
+            if len(parameter) == 0:
+                continue
             parameter_list = parameter.split("=", maxsplit=1)
             key = parameter_list[0].lower()
             if key not in allowed_values:
-                # If it is not one of the default values if a new cookie
-                cookie_list.append({"name": parameter_list[0], "value": parameter_list[1]})
+                # If it is not one of the default values is a new cookie
+                if len(parameter_list[1]) == 0:
+                    cookie_list.append({"name": parameter_list[0], "value": None})
+                else:
+                    cookie_list.append({"name": parameter_list[0], "value": parameter_list[1]})
             elif key == "expires":
                 # Create 'datetime' object from expire value
                 cookie_list[-1][key] = parser.parse(parameter_list[1])
@@ -51,8 +57,18 @@ def parse_cookies(cookie_string):
                 # For the rest of the values we save them unmodified
                 for value in allowed_values:
                     if key == value:
-                        cookie_list[-1][value] = parameter_list[1]
-    return cookie_list
+                        if key in ["secure", "httponly"]:
+                            cookie_list[-1][key] = True
+                        else:
+                            cookie_list[-1][value] = parameter_list[1]
+
+    # Discard bad formatted cookies or values
+    final_cookie_list = []
+    for cookie in cookie_list:
+        if ("expires" in cookie.keys() or "max-age" in cookie.keys()) and cookie["value"]:
+            final_cookie_list.append(cookie)
+
+    return final_cookie_list
 
 
 def check_cookies(cookie_list, domain):
@@ -74,20 +90,25 @@ def check_cookies(cookie_list, domain):
             expire_value = "max-age"
         if expire_value in cookie.keys():
             if cookie[expire_value] > one_year:
-                cookie["tracking"] = ["Very long-living cookies"]
+                cookie["tracking"] = "Very long-living cookies"
             elif cookie[expire_value] > three_months and not is_third_party:
-                cookie["tracking"] = ["Long-living cookies"]
+                cookie["tracking"] = "Long-living cookies"
             elif cookie[expire_value] > three_months and is_third_party:
-                cookie["tracking"] = ["Tracking cookies"]
+                cookie["tracking"] = "Tracking cookies"
             elif is_third_party:
-                cookie["tracking"] = ["Third-party cookies"]
+                cookie["tracking"] = "Third-party cookies"
             elif not is_third_party:
-                cookie["tracking"] = ["Session cookies"]
+                cookie["tracking"] = "Session cookies"
     return cookie_list
 
 
 def get_http_cookies(url, main_domain):
     """ Get all the cookies included on the HTTP request of a given URL """
+
+    # If not HTTP headers in DB return empty dict
+    if "response_headers" not in url.values.keys() or not url.values["response_headers"]:
+        return {}
+
     # Get url info
     db = url.db
     headers = json.loads(url.values["response_headers"])
@@ -110,8 +131,7 @@ def get_http_cookies(url, main_domain):
                 tracking_list[cookie["tracking"]] += 1
     for tracking_value in tracking_list.keys():
         tracking = Connector(db, "tracking")
-        if not tracking.load(hash_string(tracking_value)):
-            tracking.save()
+        tracking.load(hash_string(tracking_value))
         url.add(tracking, {"quantity": tracking_list[tracking_value], "update_timestamp": utc_now()})
     return tracking_list
 
@@ -121,11 +141,6 @@ def get_js_cookies(url):
 
     # Get url info
     db = url.db
-
-    # Get tracking info
-    tracking = Connector(db, "tracking")
-    if not tracking.load(hash_string("JavaScript cookies")):
-        tracking.save()
 
     # Finish if resource does not exist
     if not url.values["resource_id"]:
@@ -137,11 +152,17 @@ def get_js_cookies(url):
     if not resource.values["file"]:
         return 0
 
+    # Get tracking info
+    tracking = Connector(db, "tracking")
+    tracking.load(hash_string("JavaScript cookies"))
+
     # Return DB value if already computed
-    if resource.get("tracking", {"tracking_id": tracking.values["id"]}):
-        request = "SELECT quantity FROM resource_tracking WHERE resource_id = %d AND tracking_id = %d" % (
-            resource.values["id"], tracking.values["id"])
-        return db.custom(request)["quantity"]
+    tracking_list = resource.get("tracking", order="tracking_id")
+    for tr in tracking_list:
+        if tr.values["id"] == tracking.values["id"]:
+            request = "SELECT quantity FROM resource_tracking WHERE resource_id = %d AND tracking_id = %d" % (
+                resource.values["id"], tracking.values["id"])
+            return db.custom(request)["quantity"]
 
     # Otherwise extract file and compute
     code = zlib.decompress(resource.values["file"])
@@ -167,11 +188,6 @@ def get_font_fingerprinting(url):
     fonts = Connector(db, "font")
     fonts = fonts.get_all()
 
-    # Get tracking info
-    tracking = Connector(db, "tracking")
-    if not tracking.load(hash_string("Font fingerprinting")):
-        tracking.save()
-
     # Finish if resource does not exist
     if not url.values["resource_id"]:
         return 0
@@ -182,11 +198,17 @@ def get_font_fingerprinting(url):
     if not resource.values["file"]:
         return 0
 
+    # Get tracking info
+    tracking = Connector(db, "tracking")
+    tracking.load(hash_string("Font fingerprinting"))
+
     # Return DB value if already computed
-    if resource.get("tracking", {"tracking_id": tracking.values["id"]}):
-        request = "SELECT quantity FROM resource_tracking WHERE resource_id = %d AND tracking_id = %d" % (
-            resource.values["id"], tracking.values["id"])
-        return db.custom(request)["quantity"]
+    tracking_list = resource.get("tracking", order="tracking_id")
+    for tr in tracking_list:
+        if tr.values["id"] == tracking.values["id"]:
+            request = "SELECT quantity FROM resource_tracking WHERE resource_id = %d AND tracking_id = %d" % (
+                resource.values["id"], tracking.values["id"])
+            return db.custom(request)["quantity"]
 
     # Otherwise extract file and compute
     code = zlib.decompress(resource.values["file"])
@@ -198,7 +220,7 @@ def get_font_fingerprinting(url):
     file_offset_height = False
     file_offset_width = False
     for font in fonts:
-        if formatted_code.find(font) != -1:
+        if formatted_code.find(font.values["name"]) != -1:
             file_fonts += 1
     if formatted_code.find(".offsetHeight") != -1:
         file_offset_height = True
@@ -266,14 +288,6 @@ def get_canvas_fingerprinting(url):
     # Get url info
     db = url.db
 
-    # Get tracking info
-    tracking_big = Connector(db, "tracking")
-    if not tracking_big.load(hash_string("Canvas fingerprinting (big)")):
-        tracking_big.save()
-    tracking_small = Connector(db, "tracking")
-    if not tracking_small.load(hash_string("Canvas fingerprinting (small)")):
-        tracking_small.save()
-
     # Finish if resource does not exist
     if not url.values["resource_id"]:
         return 0
@@ -284,11 +298,19 @@ def get_canvas_fingerprinting(url):
     if not resource.values["file"]:
         return 0
 
+    # Get tracking info
+    tracking_big = Connector(db, "tracking")
+    tracking_big.load(hash_string("Canvas fingerprinting (big)"))
+    tracking_small = Connector(db, "tracking")
+    tracking_small.load(hash_string("Canvas fingerprinting (small)"))
+
     # Return DB value if already computed
-    if resource.get("tracking", {"tracking_id": tracking_big.values["id"]}):
-        return 1
-    if resource.get("tracking", {"tracking_id": tracking_small.values["id"]}):
-        return 1
+    tracking_list = resource.get("tracking", order="tracking_id")
+    for tr in tracking_list:
+        if tr.values["id"] == tracking_big.values["id"]:
+            return 1
+        elif tr.values["id"] == tracking_small.values["id"]:
+            return 1
 
     # Otherwise extract file and compute
     code = zlib.decompress(resource.values["file"])
@@ -541,8 +563,10 @@ def get_mouse_fingerprinting(url):
         return url_tracking, 0
 
     # Return DB value if already computed
-    if resource.get("tracking", {"tracking_id": tracking.values["id"]}):
-        return url_tracking, 1
+    tracking_list = resource.get("tracking", order="tracking_id")
+    for tr in tracking_list:
+        if tr.values["id"] == tracking.values["id"]:
+            return url_tracking, 1
 
     # Otherwise extract file and compute
     resource_tracking = 0
@@ -567,10 +591,15 @@ def get_mouse_fingerprinting(url):
 
 def check_tracking(url, domain):
     """ Checks all the tracking possible for the given url and domain. """
+    #print("Entro HTTP cookies")
     get_http_cookies(url, domain)
+    #print("Entro JS cookies")
     get_js_cookies(url)
+    #print("Entro font")
+    get_font_fingerprinting(url)
+    #print("Entro canvas")
     get_canvas_fingerprinting(url)
-    get_mouse_fingerprinting(url)
+    #get_mouse_fingerprinting(url)
 
 
 argument_parser = argparse.ArgumentParser(description='Tracking parser')

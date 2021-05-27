@@ -86,7 +86,7 @@ def main(process):
         else:
             domain = Connector(db, "domain")
             domain.load(site)
-            setproctitle("ORM - Worker #%d - %s" % (process, domain["name"]))
+            setproctitle("ORM - Worker #%d - %s" % (process, domain.values["name"]))
             logger.info('[Worker %d] Domain %s' % (process, domain.values["name"]))
             for driver in driver_list:
                 # Clean the domain urls before crawling new info
@@ -94,7 +94,7 @@ def main(process):
                 urls = domain.get("url", order="url_id", args=url_property)
                 for url in urls:
                     domain.remove(url)
-                    domain_list = url.get("domain")
+                    domain_list = url.get("domain", order="domain_id")
                     if len(domain_list) == 0:
                         url.delete()
                 # Launch the crawl
@@ -136,7 +136,6 @@ if __name__ == '__main__':
     cache = args.cache
     update_ublock = args.update_ublock
     update_threshold = args.update_threshold
-    no_update = args.no_update
     threads = args.threads
     temp_folder = os.path.join(os.path.abspath("."), args.tmp)
     v = args.verbose
@@ -169,6 +168,7 @@ if __name__ == '__main__':
     with Pool(processes=threads) as pool:
         p = pool.map_async(main, [i for i in range(int(threads))])
 
+        pending = ["0"]
         while True:
             # Insert new work into queue if needed.
             queue_lock.acquire()
@@ -177,14 +177,17 @@ if __name__ == '__main__':
             if qsize < (2 * threads):
                 logger.debug("[Main process] Getting work")
                 now = datetime.now(timezone.utc)
-                td = timedelta(update_threshold)
+                td = timedelta(-1 * update_threshold)
                 period = now + td
                 rq = 'SELECT id FROM domain'
                 if args.priority:
                     rq += ' WHERE priority = 1'
                 else:
-                    rq += ' WHERE update_timestamp < %s' % (period.strftime('%Y-%m-%d %H:%M:%S'))
+                    rq += ' WHERE update_timestamp < "%s"' % (period.strftime('%Y-%m-%d %H:%M:%S'))
+                rq += ' AND id NOT IN (%s)' % ','.join(pending)
                 rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (2 * threads)
+                print(rq)
+                pending = ["0"]
                 database = Db()
                 results = database.custom(rq)
                 database.close()
@@ -195,5 +198,6 @@ if __name__ == '__main__':
                     queue_lock.acquire()
                     for result in results:
                         work_queue.put(result["id"])
+                        pending.append(str(result["id"]))
                     queue_lock.release()
             time.sleep(1)
