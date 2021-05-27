@@ -186,7 +186,7 @@ if __name__ == '__main__':
                     rq += ' WHERE update_timestamp < "%s"' % (period.strftime('%Y-%m-%d %H:%M:%S'))
                 rq += ' AND id NOT IN (%s)' % ','.join(pending)
                 rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (2 * threads)
-                print(rq)
+                #print(rq)
                 pending = ["0"]
                 database = Db()
                 results = database.custom(rq)
