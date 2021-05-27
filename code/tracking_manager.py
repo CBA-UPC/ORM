@@ -274,6 +274,8 @@ def check_canvas_properties(code, prop_1, prop_2, prop_3):
                     finished = True
 
             # Depending on the size account them as possible canvas fingerprinting
+            if value == "":
+                continue
             if int(value) >= 32:
                 big += 1
             elif int(value) >= 16:
