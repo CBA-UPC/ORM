@@ -36,6 +36,7 @@ def parse_cookies(cookie_string):
         cookie_line = cookie_line.replace("; ", ";")
         parameters = cookie_line.split(";")
         for parameter in parameters:
+            # Avoid empty parameters fix ('set-cookie' strings finished in ';')
             if len(parameter) == 0:
                 continue
             parameter_list = parameter.split("=", maxsplit=1)
@@ -51,10 +52,10 @@ def parse_cookies(cookie_string):
                 cookie_list[-1][key] = parser.parse(parameter_list[1])
             elif key == "max-age":
                 # Compute expire 'datetime' object from current time + max-age value
-                now = datetime.now(timezone.utc)
+                now = datetime.now(timezone(timedelta(hours=2), "UTC+2"))
                 cookie_list[-1][key] = now + timedelta(seconds=int(parameter_list[1]))
             else:
-                # For the rest of the values we save them unmodified
+                # For the rest of the allowed values we save them unmodified
                 for value in allowed_values:
                     if key == value:
                         if key in ["secure", "httponly"]:
@@ -75,7 +76,7 @@ def check_cookies(cookie_list, domain):
     """ Checks a cookie list to find tracking cookies """
 
     # Compute periods
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone(timedelta(hours=2), name="UTC+2"))
     three_months = now + timedelta(days=90)
     one_year = now + timedelta(days=365)
 
@@ -234,7 +235,7 @@ def get_font_fingerprinting(url):
 
 
 def check_canvas_properties(code, prop_1, prop_2, prop_3):
-    """ Searches for canvas fingerprint patterns based on given properties inside the give code"""
+    """ Searches for canvas fingerprint patterns based on given properties inside the given code"""
 
     # Initialize counting variables
     big = 0
