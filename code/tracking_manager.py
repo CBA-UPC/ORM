@@ -622,3 +622,5 @@ if __name__ == '__main__':
             num_js_cookies = get_js_cookies(target_url)
             big, small = get_canvas_fingerprinting(target_url)
             url_mouse, resource_mouse = get_mouse_fingerprinting(target_url)
+    # TODO: Almacenar los resultados globales para el dominio y printarlos
+    database.close()
