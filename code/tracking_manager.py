@@ -618,7 +618,7 @@ if __name__ == '__main__':
         if isinstance(domain_name, int):
             root_domain.load(int(domain_name))
         else:
-            root_domain.load(hash_string(root_domain))
+            root_domain.load(hash_string(domain_name))
         url_list = root_domain.get("url", order="url_id")
         for target_url in url_list:
             url_cookies = get_http_cookies(target_url, root_domain)
