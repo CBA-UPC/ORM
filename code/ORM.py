@@ -106,6 +106,7 @@ def main(process):
                     driver[0], completed, repeat = visit_site(db, process, driver[0], domain,
                                                               driver[1], temp_folder, cache, update_ublock, geo_db)
                 domain.values["update_timestamp"] = utc_now()
+                domain.values["priority"] = 0
                 domain.save()
                 # TODO: Try to remove websites when unable to get info??
                 #  -> if a connection problem happens all the websites will be removed...
