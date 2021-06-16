@@ -77,6 +77,7 @@ def main(process):
         try:
             queue_lock.acquire()
             site = work_queue.get(False)
+            time.sleep(1)
             queue_lock.release()
         except queue.Empty:
             queue_lock.release()
