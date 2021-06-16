@@ -75,7 +75,7 @@ def main(process):
     while True:
         try:
             queue_lock.acquire()
-            site = work_queue.get(False)
+            site = work_queue.get(block=True, timeout=1)
             time.sleep(1)
             queue_lock.release()
         except queue.Empty:
