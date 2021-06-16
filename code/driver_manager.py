@@ -119,6 +119,7 @@ def reset_browser(driver, process, plugin, cache, update_ublock):
 def visit_site(db, process, driver, domain, plugin, temp_folder, cache, update_ublock, geo_db):
     """ Loads the website and extract its information. """
 
+    print(domain.values["name"])
     try:
         blocker_tab_handle = driver.current_window_handle
     except Exception as e:
