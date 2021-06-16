@@ -86,7 +86,7 @@ def main(process):
         else:
             domain = Connector(db, "domain")
             domain.load(site)
-            setproctitle("ORM - Worker #%d - %s" % (process, domain.values["name"]))
+            print("Domain %s (proc: %d)" % (domain.values["name"], process))
             logger.info('[Worker %d] Domain %s' % (process, domain.values["name"]))
             for driver in driver_list:
                 # Clean the domain urls before crawling new info
