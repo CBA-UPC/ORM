@@ -85,7 +85,7 @@ def main(process):
             logger.error("[Worker %d] %s" % (process, str(e)))
         else:
             domain = Connector(db, "domain")
-            domain.load(site)
+            domain.load(int(site))
             print("Domain %s (proc: %d)" % (domain.values["name"], process))
             logger.info('[Worker %d] Domain %s' % (process, domain.values["name"]))
             for driver in driver_list:
@@ -191,6 +191,7 @@ if __name__ == '__main__':
                     logger.debug("[Main process] Enqueuing work")
                     queue_lock.acquire()
                     for result in results:
+                        print(result["id"])
                         work_queue.put(result["id"])
                         pending.append(str(result["id"]))
                     queue_lock.release()
