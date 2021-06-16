@@ -90,17 +90,13 @@ def main(process):
             logger.info('[Worker %d] Domain %s' % (process, domain.values["name"]))
             for driver in driver_list:
                 # Clean the domain urls before crawling new info
-                url_property = {"plugin_id": driver[1].values['id']}
-                urls = domain.get("url", order="url_id", args=url_property)
-                for url in urls:
-                    domain.remove(url)
-                    domain_list = url.get("domain", order="domain_id")
-                    if len(domain_list) == 0:
-                        url.delete()
+                request = "DELETE FROM domain_url WHERE domain_id = %d AND plugin_id = %d" % (domain.values["id"],
+                                                                                              driver[1].values['id'])
+                db.custom(request)
                 # Launch the crawl
-                driver[0], completed, repeat = visit_site(db, process, driver[0], domain,
-                                                          driver[1], temp_folder, cache, update_ublock, geo_db)
-                extra_tries = 2
+                extra_tries = 3
+                completed = False
+                repeat = True
                 while extra_tries > 0 and not completed and repeat:
                     extra_tries -= 1
                     driver[0], completed, repeat = visit_site(db, process, driver[0], domain,
