@@ -28,7 +28,6 @@ from datetime import datetime, timezone, timedelta
 from multiprocessing import Pool, Queue, cpu_count, Lock
 
 # Own modules
-from utils import utc_now
 from db_manager import Db, Connector
 from driver_manager import build_driver, visit_site
 
@@ -106,9 +105,6 @@ def main(process):
                     extra_tries -= 1
                     driver[0], completed, repeat = visit_site(db, process, driver[0], domain,
                                                               driver[1], temp_folder, cache, update_ublock, geo_db)
-                domain.values["update_timestamp"] = utc_now()
-                domain.values["priority"] = 0
-                domain.save()
                 # TODO: Try to remove websites when unable to get info??
                 #  -> if a connection problem happens all the websites will be removed...
 

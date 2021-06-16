@@ -31,6 +31,7 @@ from selenium.common.exceptions import NoSuchWindowException
 from selenium.webdriver.common.alert import Alert
 
 # Own modules
+from utils import utc_now
 from data_manager import manage_requests
 from session_storage import SessionStorage
 
@@ -153,10 +154,16 @@ def visit_site(db, process, driver, domain, plugin, temp_folder, cache, update_u
     except WebDriverException as e:
         logger.warning("WebDriverException (2) on %s / Error: %s (proc. %d)" % (domain.values["name"], str(e), process))
         driver = reset_browser(driver, process, plugin, cache, update_ublock)
+        domain.values["update_timestamp"] = utc_now()
+        domain.values["priority"] = 0
+        domain.save()
         return driver, FAILED, NO_REPEAT
     except Exception as e:
         logger.error("%s (proc. %d)" % (str(e), process))
         driver = reset_browser(driver, process, plugin, cache, update_ublock)
+        domain.values["update_timestamp"] = utc_now()
+        domain.values["priority"] = 0
+        domain.save()
         return driver, FAILED, NO_REPEAT
     # Wait some time inside the website
     time.sleep(10)
@@ -202,4 +209,7 @@ def visit_site(db, process, driver, domain, plugin, temp_folder, cache, update_u
             logger.error("(proc. %d) Error clearing session storage: %s" % (process, str(e)))
             driver = reset_browser(driver, process, plugin, cache, update_ublock)
             return driver, FAILED, NO_REPEAT
+    domain.values["update_timestamp"] = utc_now()
+    domain.values["priority"] = 0
+    domain.save()
     return driver, COMPLETED, NO_REPEAT
