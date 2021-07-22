@@ -487,7 +487,7 @@ if __name__ == '__main__':
     sites = {}
     for i, domain in enumerate(alexa_sites, start):
         sites[domain] = {"alexa_rank": i, "majestic_rank": None, "name": domain}
-    for i, domain in enumerate(alexa_sites, start):
+    for i, domain in enumerate(majestic_sites, start):
         if domain not in sites.keys():
             sites[domain] = {"alexa_rank": None, "majestic_rank": i, "name": domain}
         else:
