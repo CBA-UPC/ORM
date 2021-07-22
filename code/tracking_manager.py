@@ -25,6 +25,8 @@ mouseEvents = ["scroll", "drag", "dragend", "dragstart", "dragleave", "dragover"
                "mozInputSource", "buttons", "movementX", "movementY", "mozPressure", "pressure",
                "deltaX", "deltaY", "deltaZ", "deltaWheel"]
 
+current_timestamp = datetime.now(timezone(timedelta(hours=2), name="UTC+2"))
+
 
 def parse_cookies(cookie_string):
     """ Parses all the cookies of the given 'set-cookie' string """
@@ -34,41 +36,78 @@ def parse_cookies(cookie_string):
     cookie_lines = cookie_string.split("\n")
     for cookie_line in cookie_lines:
         cookie_line = cookie_line.replace("; ", ";")
+        cookie_line = cookie_line.replace(";\";", ";")
         parameters = cookie_line.split(";")
+        cookie_created = False
         for parameter in parameters:
             # Avoid empty parameters fix ('set-cookie' strings finished in ';')
             if len(parameter) == 0:
                 continue
             parameter_list = parameter.split("=", maxsplit=1)
+            if len(parameter_list) == 1:
+                parameter_list = parameter.split(":", maxsplit=1)
             key = parameter_list[0].lower()
+            key = key.strip()
             if key not in allowed_values:
                 # If it is not one of the default values is a new cookie
-                if len(parameter_list[1]) == 0:
+                if len(parameter_list) == 1:
                     cookie_list.append({"name": parameter_list[0], "value": None})
                 else:
                     cookie_list.append({"name": parameter_list[0], "value": parameter_list[1]})
+                
+                cookie_created = True
             elif key == "expires":
+
                 # Create 'datetime' object from expire value
-                cookie_list[-1][key] = parser.parse(parameter_list[1])
+                if parameter_list[1] == "session" or parameter_list[1] == "Session":    
+                    cookie_list[-1][key] = datetime.now(timezone(timedelta(hours=2), "UTC+2"))
+                elif parameter_list[1].isnumeric():
+                    continue
+                else:
+                    end = parameter_list[1].find("GMT")
+                    if end == -1:
+                        try:
+                            cookie_list[-1][key] = parser.parse(parameter_list[1]+" GMT")
+                        except:
+                            logger.info("Bad formatted cookie")
+                            continue
+
+                    else:
+                        try:
+                            cookie_list[-1][key] = parser.parse(parameter_list[1][:end+3])
+                        except:
+                            logger.info("Bad formatted cookie")
+                            continue
+
             elif key == "max-age":
                 # Compute expire 'datetime' object from current time + max-age value
                 now = datetime.now(timezone(timedelta(hours=2), "UTC+2"))
-                cookie_list[-1][key] = now + timedelta(seconds=int(parameter_list[1]))
+                if int(parameter_list[1]) >= 31536000*5:
+                    cookie_list[-1][key] = now + timedelta(seconds=315360000)
+                else:
+                    cookie_list[-1][key] = now + timedelta(seconds=int(parameter_list[1]))
             else:
                 # For the rest of the allowed values we save them unmodified
                 for value in allowed_values:
                     if key == value:
-                        if key in ["secure", "httponly"]:
+                        if not cookie_created:
+                            if len(parameter_list) == 1:
+                                cookie_list.append({"name": parameter_list[0], "value": None})
+                            else:
+                                cookie_list.append({"name": parameter_list[0], "value": parameter_list[1]})
+                            cookie_created = True
+                        elif key in ["secure", "httponly"]:
                             cookie_list[-1][key] = True
                         else:
-                            cookie_list[-1][value] = parameter_list[1]
-
+                            if len(parameter_list) == 1 or parameter_list[1] == "none" or parameter_list[1] == "None":
+                                cookie_list[-1][value] = "None"
+                            else:
+                                cookie_list[-1][value] = parameter_list[1]
     # Discard bad formatted cookies or values
     final_cookie_list = []
     for cookie in cookie_list:
         if ("expires" in cookie.keys() or "max-age" in cookie.keys()) and cookie["value"]:
             final_cookie_list.append(cookie)
-
     return final_cookie_list
 
 
@@ -89,15 +128,16 @@ def check_cookies(cookie_list, domain):
         expire_value = "expires"
         if "max-age" in cookie.keys():
             expire_value = "max-age"
+
         if expire_value in cookie.keys():
-            if cookie[expire_value] > one_year:
-                cookie["tracking"] = "Very long-living cookies"
-            elif cookie[expire_value] > three_months and not is_third_party:
-                cookie["tracking"] = "Long-living cookies"
-            elif cookie[expire_value] > three_months and is_third_party:
+            if cookie[expire_value] > three_months and is_third_party:
                 cookie["tracking"] = "Tracking cookies"
             elif is_third_party:
                 cookie["tracking"] = "Third-party cookies"
+            elif cookie[expire_value] > one_year:
+                cookie["tracking"] = "Very long-living cookies"
+            elif cookie[expire_value] > three_months and not is_third_party:
+                cookie["tracking"] = "Long-living cookies"
             elif not is_third_party:
                 cookie["tracking"] = "Session cookies"
     return cookie_list
@@ -118,10 +158,10 @@ def get_http_cookies(url, main_domain):
     http_cookies = []
     if "set-cookie" in headers.keys():
         http_cookies = parse_cookies(headers["set-cookie"])
+        
     elif "Set-Cookie" in headers.keys():
         http_cookies = parse_cookies(headers["Set-Cookie"])
     http_cookies = check_cookies(http_cookies, main_domain)
-
     # Insert cookie info in DB
     tracking_list = {}
     for cookie in http_cookies:
@@ -133,7 +173,9 @@ def get_http_cookies(url, main_domain):
     for tracking_value in tracking_list.keys():
         tracking = Connector(db, "tracking")
         tracking.load(hash_string(tracking_value))
-        url.add(tracking, {"quantity": tracking_list[tracking_value], "update_timestamp": utc_now()})
+        url.add(tracking, {"quantity": tracking_list[tracking_value],
+                           "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+    
     return tracking_list
 
 
@@ -161,9 +203,9 @@ def get_js_cookies(url):
     tracking_list = resource.get("tracking", order="tracking_id")
     for tr in tracking_list:
         if tr.values["id"] == tracking.values["id"]:
-            request = "SELECT quantity FROM resource_tracking WHERE resource_id = %d AND tracking_id = %d" % (
-                resource.values["id"], tracking.values["id"])
-            return db.custom(request)["quantity"]
+            request = "SELECT quantity FROM resource_tracking WHERE resource_id = %d AND tracking_id = %d" \
+                      % (resource.values["id"], tracking.values["id"])
+            return db.custom(request)[0]["quantity"]
 
     # Otherwise extract file and compute
     code = zlib.decompress(resource.values["file"])
@@ -174,10 +216,12 @@ def get_js_cookies(url):
     cookies = 0
     if formatted_code.find(".cookie=") != -1:
         cookies += len(formatted_code.split(".cookie=")) - 1
-
     # If tracking found, save inside DB
     if cookies > 0:
-        url.add(tracking, {"quantity": cookies, "update_timestamp": utc_now()})
+        url.add(tracking, {"quantity": cookies,
+                           "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        resource.add(tracking, {"quantity": cookies,
+                                "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
     return cookies
 
 
@@ -207,9 +251,9 @@ def get_font_fingerprinting(url):
     tracking_list = resource.get("tracking", order="tracking_id")
     for tr in tracking_list:
         if tr.values["id"] == tracking.values["id"]:
-            request = "SELECT quantity FROM resource_tracking WHERE resource_id = %d AND tracking_id = %d" % (
-                resource.values["id"], tracking.values["id"])
-            return db.custom(request)["quantity"]
+            request = "SELECT quantity FROM resource_tracking WHERE resource_id = %d AND tracking_id = %d" \
+                      % (resource.values["id"], tracking.values["id"])
+            return db.custom(request)[0]["quantity"]
 
     # Otherwise extract file and compute
     code = zlib.decompress(resource.values["file"])
@@ -230,7 +274,10 @@ def get_font_fingerprinting(url):
 
     # If tracking found, save inside DB
     if file_fonts > 28 and file_offset_height and file_offset_width:
-        url.add(tracking, {"quantity": file_fonts, "update_timestamp": utc_now()})
+        url.add(tracking, {"quantity": file_fonts,
+                           "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        resource.add(tracking, {"quantity": file_fonts,
+                                "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
     return file_fonts
 
 
@@ -240,12 +287,14 @@ def check_canvas_properties(code, prop_1, prop_2, prop_3):
     # Initialize counting variables
     big = 0
     icon = 0
+    small = 0
 
     # Search canvas string combination
     if code.find(prop_1) != -1 and code.find(prop_2) != -1 and code.find(prop_3) != -1:
         code_pieces = code.split(prop_2)
         skip_next = False
         for i in range(len(code_pieces)):
+
             # Avoid counting '-width:' and '-height:' values
             skip_current = False
             if i == 0 or skip_next:
@@ -262,7 +311,10 @@ def check_canvas_properties(code, prop_1, prop_2, prop_3):
             index = 0
             finished = False
             while not finished:
-                last_value = piece[index]
+                last_value = ""
+                if index < len(piece):
+                    last_value = piece[index]
+                
                 if last_value.isnumeric():
                     value += last_value
                     index += 1
@@ -280,7 +332,10 @@ def check_canvas_properties(code, prop_1, prop_2, prop_3):
                 big += 1
             elif int(value) >= 16:
                 icon += 1
-    return big, icon
+            else:
+                small += 1
+    print("return")
+    return big, icon, small
 
 
 def get_canvas_fingerprinting(url):
@@ -325,18 +380,28 @@ def get_canvas_fingerprinting(url):
     code = code.replace("\\\\", "")
     code = code.replace("\\n", "")
     code = code.replace("\\'", "'")
-    big_width, icon_width = check_canvas_properties(code, ".createElement(\"canvas\")", ".width=", ".toDataURL(")
-    big_height, icon_height = check_canvas_properties(code, ".createElement(\"canvas\")", ".height=", ".toDataURL(")
-    big_width2, icon_width2 = check_canvas_properties(code, ".createElement(\"canvas\")", "width:", ".toDataURL(")
-    big_height2, icon_height2 = check_canvas_properties(code, ".createElement(\"canvas\")", "height:", ".toDataURL(")
+    big_width, icon_width, small_width = check_canvas_properties(code, ".createElement(\"canvas\")",
+                                                                 ".width=", ".toDataURL(")
+    big_height, icon_height, small_height = check_canvas_properties(code, ".createElement(\"canvas\")",
+                                                                    ".height=", ".toDataURL(")
+    big_width2, icon_width2, small_width2 = check_canvas_properties(code, ".createElement(\"canvas\")",
+                                                                    "width:", ".toDataURL(")
+    big_height2, icon_height2, small_height2 = check_canvas_properties(code, ".createElement(\"canvas\")",
+                                                                       "height:", ".toDataURL(")
     canvas1 = min(big_width, big_height) + min(big_width2, big_height2)
     canvas2 = min(icon_width, icon_height) + min(icon_width2, icon_height2)
 
     # If tracking found, save inside DB
     if canvas1:
-        resource.add(tracking_big, {"quantity": canvas1, "update_timestamp": utc_now()})
+        resource.add(tracking_big, {"quantity": canvas1,
+                                    "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        url.add(tracking_big, {"quantity": canvas1,
+                               "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
     if canvas2:
-        resource.add(tracking_small, {"quantity": canvas2, "update_timestamp": utc_now()})
+        resource.add(tracking_small, {"quantity": canvas2,
+                                      "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        url.add(tracking_small, {"quantity": canvas2,
+                                 "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
     return canvas1, canvas2
 
 
@@ -356,7 +421,7 @@ def find_end(javascript_file, a, ini_label, end_label):
             curr = f.read(1)
             if curr == ini_label:
                 val += 1
-            elif curr == end_label:
+            elif curr == end_label or len(curr) < 1:
                 if val == 0:
                     end = True
                     pos = f.tell()
@@ -388,7 +453,7 @@ def parse_mouse_fingerprinting(javascript_file):
             if "<!" in html or "docty" in html:
                 return False
         except UnicodeDecodeError as e:
-            print("Probably not an UTF-8 file")
+            logger.info("Mouse fingerprint module error: Probably not an UTF-8 file")
             return False
         f.seek(0)
         s = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
@@ -411,7 +476,7 @@ def parse_mouse_fingerprinting(javascript_file):
                 org_point2 = s.find(d)
                 org_point3 = s.find(e)
             except OverflowError as err:
-                print("File too large")
+                logger.info("Mouse fingerprint module error: File too large")
             if org_point != -1:
                 org_point = f.seek(org_point + len(find))
                 f.read(1)
@@ -444,7 +509,7 @@ def parse_mouse_fingerprinting(javascript_file):
                     try:
                         point = s.rfind(b)
                     except OverflowError as err:
-                        print("File too large")
+                        logger.info("Mouse fingerprint module error: File too large")
                     if point != -1:
                         point = f.seek(point + len(find))
                         pos = find_end(javascript_file, point, "{", "}")
@@ -488,7 +553,7 @@ def parse_mouse_fingerprinting(javascript_file):
                             try:
                                 point = s.rfind(c)
                             except OverflowError as err:
-                                print("File too large")
+                                logger.info("Mouse fingerprint module error: File too large")
                             if point != -1:
                                 point = f.seek(point + len(find))
                                 pos = find_end(javascript_file, point, "{", "}")
@@ -505,7 +570,7 @@ def parse_mouse_fingerprinting(javascript_file):
                 try:
                     ret = s.find(d, point, pos)
                 except OverflowError as err:
-                    print("File too large")
+                    logger.info("Mouse fingerprint module error: File too large")
                 if ret != -1:
                     return True
                 d = bytearray()
@@ -513,7 +578,7 @@ def parse_mouse_fingerprinting(javascript_file):
                 try:
                     ret = s.find(d, point, pos)
                 except OverflowError as err:
-                    print("File too large")
+                    logger.info("Mouse fingerprint module error: File too large")
                 if ret != -1:
                     return True
             if not done and org_point3 != -1:
@@ -525,7 +590,7 @@ def parse_mouse_fingerprinting(javascript_file):
                 try:
                     ret = s.find(d, point, pos)
                 except OverflowError as err:
-                    print("File too large")
+                    logger.info("Mouse fingerprint module error: File too large")
                 if ret != -1:
                     return True
 
@@ -541,16 +606,22 @@ def get_mouse_fingerprinting(url):
 
     # Check if already in database
     url_tracking = 0
-    if url.get("tracking", {"tracking_id": tracking.values["id"]}):
-        url_tracking = 1
+    trackings = url.get("tracking", order="tracking_id")
+
+    for t in trackings:
+        
+        if t.values["id"] == tracking.values["id"]:
+            url_tracking = 1
+    """if url.get("tracking", {"tracking_id": tracking.values["id"]}):
+        url_tracking = 1"""
 
     # If not in database compare to mouse tracking domains
     if not url_tracking:
         mouse_tracking_domains = Connector(db, "mouse_tracking_domains")
-        mouse_tracking_domains.get_all()
+        mouse_tracking_domains = mouse_tracking_domains.get_all()
         for domain in mouse_tracking_domains:
             if re.search(domain, url.values["url"]):
-                url.add(tracking, {"update_timestamp": utc_now()})
+                url.add(tracking, {"update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
                 url_tracking = 1
 
     # Finish if resource does not exist
@@ -584,46 +655,144 @@ def get_mouse_fingerprinting(url):
         logger.info("Mouse tracking error %s" % str(e))
     else:
         if tracker:
-            resource.add(tracking)
             resource_tracking = 1
+            resource.add(tracking, {"quantity": resource_tracking,
+                                    "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+            url.add(tracking, {"quantity": resource_tracking,
+                               "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
     os.remove(tmp_filename)
     return url_tracking, resource_tracking
 
 
+def get_webgl_fingerprint(url):
+    # Get url info
+    db = url.db
+
+    # Finish if resource does not exist
+    if not url.values["resource_id"]:
+        return 0
+
+    # Finish if we don't have the resource in the DB (we only save HTML and JS files)
+    resource = Connector(db, "resource")
+    resource.load(url.values["resource_id"])
+    if not resource.values["file"]:
+        return 0
+
+    # Get tracking info
+    tracking = Connector(db, "tracking")
+    tracking.load(hash_string("WebGL fingerprinting"))
+
+    # Return DB value if already computed
+    tracking_list = resource.get("tracking", order="tracking_id")
+    for tr in tracking_list:
+        if tr.values["id"] == tracking.values["id"]:
+            return 1
+    
+    # Otherwise extract file and compute
+    code = zlib.decompress(resource.values["file"])
+    try:
+        formatted_code = str(code, 'utf-8')
+    except Exception as e:
+        formatted_code = str(code)
+
+    code = formatted_code[:-1]
+    code = code.replace("b'", "")
+    code = code.replace("\\\\", "")
+    code = code.replace("\\n", "")
+    code = code.replace("\\'", "'")
+    big_width, icon_width, small_width = check_canvas_properties(code, ".createElement(\"canvas\")",
+                                                                 ".width=", ".toDataURL(")
+    big_height, icon_height, small_height = check_canvas_properties(code, ".createElement(\"canvas\")",
+                                                                    ".height=", ".toDataURL(")
+    big_width2, icon_width2, small_width2 = check_canvas_properties(code, ".createElement(\"canvas\")",
+                                                                    "width:", ".toDataURL(")
+    big_height2, icon_height2, small_height2 = check_canvas_properties(code, ".createElement(\"canvas\")",
+                                                                       "height:", ".toDataURL(")
+
+    lista = ["copyBufferSubData", "getBufferSubData", "blitFramebuffer", "framebufferTextureLayer",
+             "getInternalformatParameter", "invalidateFramebuffer", "invalidateSubFramebuffer", "readBuffer",
+             "renderbufferStorageMultisample", "texStorage2D", "texStorage3D", "texImage3D", "texSubImage3D",
+             "copyTexSubImage3D", "compressedTexImage3D", "compressedTexSubImage3D", "getFragDataLocation",
+             "uniform1ui", "uniform2ui", "uniform3ui", "uniform4ui", "uniform1uiv", "uniform2uiv", "uniform3uiv",
+             "uniform4uiv", "uniformMatrix2x3fv", "uniformMatrix3x2fv", "uniformMatrix2x4fv", "uniformMatrix4x2fv",
+             "uniformMatrix3x4fv", "uniformMatrix4x3fv", "vertexAttribI4i", "vertexAttribI4iv", "vertexAttribI4ui",
+             "vertexAttribI4uiv", "vertexAttribIPointer", "vertexAttribDivisor", "drawArraysInstanced",
+             "drawElementsInstanced", "drawRangeElements", "drawBuffers", "clearBufferiv", "clearBufferuiv",
+             "clearBufferfv", "clearBufferfi", "createQuery", "deleteQuery", "isQuery", "beginQuery", "endQuery",
+             "getQuery", "getQueryParameter", "createSampler", "deleteSampler", "isSampler", "bindSampler",
+             "samplerParameteri", "samplerParameterf", "getSamplerParameter", "fenceSync", "isSync", "deleteSync",
+             "clientWaitSync", "waitSync", "getSyncParameter", "createTransformFeedback", "deleteTransformFeedback",
+             "isTransformFeedback", "bindTransformFeedback", "beginTransformFeedback", "endTransformFeedback",
+             "transformFeedbackVaryings", "getTransformFeedbackVarying", "pauseTransformFeedback",
+             "resumeTransformFeedback", "bindBufferBase", "bindBufferRange", "getIndexedParameter",
+             "getUniformIndices", "getActiveUniforms", "getUniformBlockIndex", "getActiveUniformBlockParameter",
+             "getActiveUniformBlockName", "uniformBlockBinding", "createVertexArray", "deleteVertexArray",
+             "isVertexArray", "bindVertexArray"]
+    performance = unmasked = res_num_webgl_calls = 0
+    
+    if code.find(".performance") != -1:
+        performance += 1
+    if code.find(".mozPerformance") != -1:
+        performance += 1
+    if code.find(".msPerformance") != -1:
+        performance += 1
+    if code.find("UNMASKED_RENDERER_WEBGL") != -1:
+        unmasked += 1
+    if code.find("UNMASKED_VENDOR_WEBGL") != -1:
+        unmasked += 1
+
+    for l in lista:
+        if code.find(l) != -1:
+
+            res_num_webgl_calls += 1
+
+    small_canvas = min(small_width, small_height) + min(small_width2, small_height2)
+    total = 0
+    if small_canvas and (res_num_webgl_calls > 60 or performance > 0 or unmasked > 0):
+        
+        if res_num_webgl_calls > 60:
+            total += 1
+        if performance > 0:
+            total += 1
+        if unmasked > 0:
+            total += 1
+
+        resource.add(tracking, {"quantity": total,
+                                "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        url.add(tracking, {"quantity": total,
+                           "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+    return total
+
+
 def check_tracking(url, domain):
     """ Checks all the possible tracking for the given url and domain. """
-    #print("Entro HTTP cookies")
     get_http_cookies(url, domain)
-    #print("Entro JS cookies")
     get_js_cookies(url)
-    #print("Entro font")
     get_font_fingerprinting(url)
-    #print("Entro canvas")
     get_canvas_fingerprinting(url)
-    #get_mouse_fingerprinting(url)
+    get_mouse_fingerprinting(url)
+    get_webgl_fingerprint(url)
 
 
-argument_parser = argparse.ArgumentParser(description='Tracking parser')
-argument_parser.add_argument('domains', metavar='N', type=str, nargs='+',
-                             help='Domain list to search for tracking info')
-
-if __name__ == '__main__':
-    """ Main process """
-
-    # Take arguments
-    args = argument_parser.parse_args()
-    database = Db()
-    for domain_name in args.domains:
-        root_domain = Connector(database, "domain")
-        if isinstance(domain_name, int):
-            root_domain.load(int(domain_name))
+def calculate_intrusion_level(domain):
+    intrusion_level = 0
+    trackings_in_domain = {}
+    urls = domain.get("url", order="url_id")
+    
+    for url in urls:
+        
+        trackings = url.get("tracking", order="tracking_id")
+        for track in trackings:
+            
+            if track.values["name"] in trackings_in_domain.keys():
+                trackings_in_domain[track.values["name"]] += track.values["intrusion_level"]
+            else:
+                trackings_in_domain[track.values["name"]] = track.values["intrusion_level"]
+    for t in trackings_in_domain:
+        
+        if trackings_in_domain[t] > 9:
+            intrusion_level += 9
         else:
-            root_domain.load(hash_string(domain_name))
-        url_list = root_domain.get("url", order="url_id")
-        for target_url in url_list:
-            url_cookies = get_http_cookies(target_url, root_domain)
-            num_js_cookies = get_js_cookies(target_url)
-            big, small = get_canvas_fingerprinting(target_url)
-            url_mouse, resource_mouse = get_mouse_fingerprinting(target_url)
-    # TODO: Almacenar los resultados globales para el dominio y printarlos
-    database.close()
+            intrusion_level += trackings_in_domain[t]
+
+    return intrusion_level
