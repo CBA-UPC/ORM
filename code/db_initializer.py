@@ -469,18 +469,29 @@ parser.add_argument('start', type=int, default=0, help='Start index (0 indexed)'
 parser.add_argument('end', type=int, help='End index (not included)', nargs='?')
 parser.add_argument('-f', dest='filename', type=str, default='../assets/alexa/top-1m.csv.zip',
                     help='File containing one domain per line or an alexa csv. Can be a zip or gz file')
+parser.add_argument('-f2', dest='filename2', type=str, default='../assets/majestic/majestic_million.csv.zip',
+                    help='File containing one domain per line or a majestic_million csv. Can be a zip or gz file')
 
 
 if __name__ == '__main__':
     args = parser.parse_args()
     start = args.start
     end = args.end
-    sites_length = end - start
 
     # Initialize the database
     modified = int(os.path.getmtime(args.filename))
     timestamp = datetime.utcfromtimestamp(modified).strftime('%Y-%m-%d %H:%M:%S')
-    sites = config.load_csv(args.filename, 1)[slice(start, end, None)]
+    print("Reading domain csv files")
+    alexa_sites = config.load_csv(args.filename, 1)[slice(start - 1, end - 1, None)]
+    majestic_sites = config.load_csv(args.filename2, 2)[slice(start - 1, end - 1, None)]
+    sites = {}
+    for i, domain in enumerate(alexa_sites, start):
+        sites[domain] = {"alexa_rank": i, "majestic_rank": None, "name": domain}
+    for i, domain in enumerate(alexa_sites, start):
+        if domain not in sites.keys():
+            sites[domain] = {"alexa_rank": None, "majestic_rank": i, "name": domain}
+        else:
+            sites[domain]["majestic_rank"] = i
     print("Initializing database")
     database = Db()
     init_plugins()
@@ -488,5 +499,5 @@ if __name__ == '__main__':
     init_tracking()
     init_fonts()
     init_mouse_tracking_domains()
-    database.initialize(sites, start, timestamp)
+    database.initialize(sites, timestamp)
     database.close()

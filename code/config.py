@@ -50,7 +50,7 @@ def load_csv(filename, column):
         lines = [line for line in f.read().decode('utf8').split('\n')]
         # domains don't contain commas, so it should be safe
         sites = [domain(line) for line in lines if line]
-        return sites[column - 1:]
+        return sites
 
 
 def load_list(path):
