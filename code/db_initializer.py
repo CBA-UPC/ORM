@@ -461,6 +461,7 @@ def init_mouse_tracking_domains():
     for tracking_domain in tracking_domains:
         domain = Connector(database, "mouse_tracking_domains")
         domain.load(hash_string(tracking_domain))
+        domain.values["name"] = tracking_domain
         domain.save()
 
 
