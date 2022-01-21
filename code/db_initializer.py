@@ -459,7 +459,7 @@ def init_mouse_tracking_domains():
     tracking_domains = ["clicktale.com", "clicktale.net", "etracker.com", "clickmap.ch",
                         "script.crazyegg.com", "tracking.crazyegg.com", "hotjar.com", "mouseflow.com"]
     for tracking_domain in tracking_domains:
-        domain = Connector(database, "mouse_tracking_domain")
+        domain = Connector(database, "mouse_tracking_domains")
         domain.load(hash_string(tracking_domain))
         domain.save()
 
