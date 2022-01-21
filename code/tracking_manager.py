@@ -829,12 +829,8 @@ if __name__ == '__main__':
             queue_lock.release()
             if qsize < (2 * threads):
                 logger.debug("[Main process] Getting work")
-                now = datetime.now(timezone.utc)
-                td = timedelta(-1 * update_threshold)
-                period = now + td
                 rq = 'SELECT id FROM domain'
-                if args.priority:
-                    rq += ' WHERE id > %d' % current
+                rq += ' WHERE id > %d' % current
                 rq += ' AND id NOT IN (%s)' % ','.join(pending)
                 rq += ' ORDER BY id ASC LIMIT %d ' % (2 * threads)
                 pending = ["0"]
