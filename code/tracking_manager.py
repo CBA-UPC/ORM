@@ -57,7 +57,7 @@ def parse_cookies(cookie_string):
                 
                 cookie_created = True
             elif key == "expires":
-
+                
                 # Create 'datetime' object from expire value
                 if parameter_list[1] == "session" or parameter_list[1] == "Session":    
                     cookie_list[-1][key] = datetime.now(timezone(timedelta(hours=2), "UTC+2"))
@@ -69,14 +69,12 @@ def parse_cookies(cookie_string):
                         try:
                             cookie_list[-1][key] = parser.parse(parameter_list[1]+" GMT")
                         except:
-                            logger.info("Bad formatted cookie")
                             continue
 
                     else:
                         try:
                             cookie_list[-1][key] = parser.parse(parameter_list[1][:end+3])
                         except:
-                            logger.info("Bad formatted cookie")
                             continue
 
             elif key == "max-age":
@@ -173,8 +171,7 @@ def get_http_cookies(url, main_domain):
     for tracking_value in tracking_list.keys():
         tracking = Connector(db, "tracking")
         tracking.load(hash_string(tracking_value))
-        url.add(tracking, {"quantity": tracking_list[tracking_value],
-                           "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        url.add(tracking, {"quantity": tracking_list[tracking_value], "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
     
     return tracking_list
 
@@ -203,8 +200,7 @@ def get_js_cookies(url):
     tracking_list = resource.get("tracking", order="tracking_id")
     for tr in tracking_list:
         if tr.values["id"] == tracking.values["id"]:
-            request = "SELECT quantity FROM resource_tracking WHERE resource_id = %d AND tracking_id = %d" \
-                      % (resource.values["id"], tracking.values["id"])
+            request = "SELECT quantity FROM resource_tracking WHERE resource_id = %d AND tracking_id = %d" % (resource.values["id"], tracking.values["id"])
             return db.custom(request)[0]["quantity"]
 
     # Otherwise extract file and compute
@@ -218,10 +214,8 @@ def get_js_cookies(url):
         cookies += len(formatted_code.split(".cookie=")) - 1
     # If tracking found, save inside DB
     if cookies > 0:
-        url.add(tracking, {"quantity": cookies,
-                           "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
-        resource.add(tracking, {"quantity": cookies,
-                                "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        url.add(tracking, {"quantity": cookies, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        resource.add(tracking, {"quantity": cookies, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
     return cookies
 
 
@@ -251,8 +245,7 @@ def get_font_fingerprinting(url):
     tracking_list = resource.get("tracking", order="tracking_id")
     for tr in tracking_list:
         if tr.values["id"] == tracking.values["id"]:
-            request = "SELECT quantity FROM resource_tracking WHERE resource_id = %d AND tracking_id = %d" \
-                      % (resource.values["id"], tracking.values["id"])
+            request = "SELECT quantity FROM resource_tracking WHERE resource_id = %d AND tracking_id = %d" % (resource.values["id"], tracking.values["id"])
             return db.custom(request)[0]["quantity"]
 
     # Otherwise extract file and compute
@@ -274,10 +267,8 @@ def get_font_fingerprinting(url):
 
     # If tracking found, save inside DB
     if file_fonts > 28 and file_offset_height and file_offset_width:
-        url.add(tracking, {"quantity": file_fonts,
-                           "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
-        resource.add(tracking, {"quantity": file_fonts,
-                                "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        url.add(tracking, {"quantity": file_fonts, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        resource.add(tracking, {"quantity": file_fonts, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
     return file_fonts
 
 
@@ -334,7 +325,6 @@ def check_canvas_properties(code, prop_1, prop_2, prop_3):
                 icon += 1
             else:
                 small += 1
-    print("return")
     return big, icon, small
 
 
@@ -380,28 +370,20 @@ def get_canvas_fingerprinting(url):
     code = code.replace("\\\\", "")
     code = code.replace("\\n", "")
     code = code.replace("\\'", "'")
-    big_width, icon_width, small_width = check_canvas_properties(code, ".createElement(\"canvas\")",
-                                                                 ".width=", ".toDataURL(")
-    big_height, icon_height, small_height = check_canvas_properties(code, ".createElement(\"canvas\")",
-                                                                    ".height=", ".toDataURL(")
-    big_width2, icon_width2, small_width2 = check_canvas_properties(code, ".createElement(\"canvas\")",
-                                                                    "width:", ".toDataURL(")
-    big_height2, icon_height2, small_height2 = check_canvas_properties(code, ".createElement(\"canvas\")",
-                                                                       "height:", ".toDataURL(")
+    big_width, icon_width, small_width = check_canvas_properties(code, ".createElement(\"canvas\")", ".width=", ".toDataURL(")
+    big_height, icon_height, small_height = check_canvas_properties(code, ".createElement(\"canvas\")", ".height=", ".toDataURL(")
+    big_width2, icon_width2, small_width2 = check_canvas_properties(code, ".createElement(\"canvas\")", "width:", ".toDataURL(")
+    big_height2, icon_height2, small_height2 = check_canvas_properties(code, ".createElement(\"canvas\")", "height:", ".toDataURL(")
     canvas1 = min(big_width, big_height) + min(big_width2, big_height2)
     canvas2 = min(icon_width, icon_height) + min(icon_width2, icon_height2)
 
     # If tracking found, save inside DB
     if canvas1:
-        resource.add(tracking_big, {"quantity": canvas1,
-                                    "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
-        url.add(tracking_big, {"quantity": canvas1,
-                               "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        resource.add(tracking_big, {"quantity": canvas1, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        url.add(tracking_big, {"quantity": canvas1, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
     if canvas2:
-        resource.add(tracking_small, {"quantity": canvas2,
-                                      "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
-        url.add(tracking_small, {"quantity": canvas2,
-                                 "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        resource.add(tracking_small, {"quantity": canvas2, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        url.add(tracking_small, {"quantity": canvas2, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
     return canvas1, canvas2
 
 
@@ -441,7 +423,7 @@ def ret_post(javascript_file, ini, end):
                 if s.find(ba, ini, end) != -1:
                     return True
             except OverflowError as err:
-                print("File too large")
+                logger.info("File too large")
 
 
 def parse_mouse_fingerprinting(javascript_file):
@@ -453,7 +435,7 @@ def parse_mouse_fingerprinting(javascript_file):
             if "<!" in html or "docty" in html:
                 return False
         except UnicodeDecodeError as e:
-            logger.info("Mouse fingerprint module error: Probably not an UTF-8 file")
+            logger.info("Probably not an UTF-8 file")
             return False
         f.seek(0)
         s = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
@@ -476,7 +458,7 @@ def parse_mouse_fingerprinting(javascript_file):
                 org_point2 = s.find(d)
                 org_point3 = s.find(e)
             except OverflowError as err:
-                logger.info("Mouse fingerprint module error: File too large")
+                logger.info("File too large")
             if org_point != -1:
                 org_point = f.seek(org_point + len(find))
                 f.read(1)
@@ -509,7 +491,7 @@ def parse_mouse_fingerprinting(javascript_file):
                     try:
                         point = s.rfind(b)
                     except OverflowError as err:
-                        logger.info("Mouse fingerprint module error: File too large")
+                        logger.info("File too large")
                     if point != -1:
                         point = f.seek(point + len(find))
                         pos = find_end(javascript_file, point, "{", "}")
@@ -553,7 +535,7 @@ def parse_mouse_fingerprinting(javascript_file):
                             try:
                                 point = s.rfind(c)
                             except OverflowError as err:
-                                logger.info("Mouse fingerprint module error: File too large")
+                                logger.info("File too large")
                             if point != -1:
                                 point = f.seek(point + len(find))
                                 pos = find_end(javascript_file, point, "{", "}")
@@ -570,7 +552,7 @@ def parse_mouse_fingerprinting(javascript_file):
                 try:
                     ret = s.find(d, point, pos)
                 except OverflowError as err:
-                    logger.info("Mouse fingerprint module error: File too large")
+                    logger.info("File too large")
                 if ret != -1:
                     return True
                 d = bytearray()
@@ -578,7 +560,7 @@ def parse_mouse_fingerprinting(javascript_file):
                 try:
                     ret = s.find(d, point, pos)
                 except OverflowError as err:
-                    logger.info("Mouse fingerprint module error: File too large")
+                    logger.info("File too large")
                 if ret != -1:
                     return True
             if not done and org_point3 != -1:
@@ -590,7 +572,7 @@ def parse_mouse_fingerprinting(javascript_file):
                 try:
                     ret = s.find(d, point, pos)
                 except OverflowError as err:
-                    logger.info("Mouse fingerprint module error: File too large")
+                    logger.info("File too large")
                 if ret != -1:
                     return True
 
@@ -655,14 +637,12 @@ def get_mouse_fingerprinting(url):
         logger.info("Mouse tracking error %s" % str(e))
     else:
         if tracker:
+            #resource.add(tracking)
             resource_tracking = 1
-            resource.add(tracking, {"quantity": resource_tracking,
-                                    "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
-            url.add(tracking, {"quantity": resource_tracking,
-                               "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+            resource.add(tracking, {"quantity": resource_tracking, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+            url.add(tracking, {"quantity": resource_tracking, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
     os.remove(tmp_filename)
     return url_tracking, resource_tracking
-
 
 def get_webgl_fingerprint(url):
     # Get url info
@@ -682,6 +662,7 @@ def get_webgl_fingerprint(url):
     tracking = Connector(db, "tracking")
     tracking.load(hash_string("WebGL fingerprinting"))
 
+
     # Return DB value if already computed
     tracking_list = resource.get("tracking", order="tracking_id")
     for tr in tracking_list:
@@ -700,46 +681,24 @@ def get_webgl_fingerprint(url):
     code = code.replace("\\\\", "")
     code = code.replace("\\n", "")
     code = code.replace("\\'", "'")
-    big_width, icon_width, small_width = check_canvas_properties(code, ".createElement(\"canvas\")",
-                                                                 ".width=", ".toDataURL(")
-    big_height, icon_height, small_height = check_canvas_properties(code, ".createElement(\"canvas\")",
-                                                                    ".height=", ".toDataURL(")
-    big_width2, icon_width2, small_width2 = check_canvas_properties(code, ".createElement(\"canvas\")",
-                                                                    "width:", ".toDataURL(")
-    big_height2, icon_height2, small_height2 = check_canvas_properties(code, ".createElement(\"canvas\")",
-                                                                       "height:", ".toDataURL(")
+    big_width, icon_width, small_width = check_canvas_properties(code, ".createElement(\"canvas\")", ".width=", ".toDataURL(")
+    big_height, icon_height, small_height = check_canvas_properties(code, ".createElement(\"canvas\")", ".height=", ".toDataURL(")
+    big_width2, icon_width2, small_width2 = check_canvas_properties(code, ".createElement(\"canvas\")", "width:", ".toDataURL(")
+    big_height2, icon_height2, small_height2 = check_canvas_properties(code, ".createElement(\"canvas\")", "height:", ".toDataURL(")
 
-    lista = ["copyBufferSubData", "getBufferSubData", "blitFramebuffer", "framebufferTextureLayer",
-             "getInternalformatParameter", "invalidateFramebuffer", "invalidateSubFramebuffer", "readBuffer",
-             "renderbufferStorageMultisample", "texStorage2D", "texStorage3D", "texImage3D", "texSubImage3D",
-             "copyTexSubImage3D", "compressedTexImage3D", "compressedTexSubImage3D", "getFragDataLocation",
-             "uniform1ui", "uniform2ui", "uniform3ui", "uniform4ui", "uniform1uiv", "uniform2uiv", "uniform3uiv",
-             "uniform4uiv", "uniformMatrix2x3fv", "uniformMatrix3x2fv", "uniformMatrix2x4fv", "uniformMatrix4x2fv",
-             "uniformMatrix3x4fv", "uniformMatrix4x3fv", "vertexAttribI4i", "vertexAttribI4iv", "vertexAttribI4ui",
-             "vertexAttribI4uiv", "vertexAttribIPointer", "vertexAttribDivisor", "drawArraysInstanced",
-             "drawElementsInstanced", "drawRangeElements", "drawBuffers", "clearBufferiv", "clearBufferuiv",
-             "clearBufferfv", "clearBufferfi", "createQuery", "deleteQuery", "isQuery", "beginQuery", "endQuery",
-             "getQuery", "getQueryParameter", "createSampler", "deleteSampler", "isSampler", "bindSampler",
-             "samplerParameteri", "samplerParameterf", "getSamplerParameter", "fenceSync", "isSync", "deleteSync",
-             "clientWaitSync", "waitSync", "getSyncParameter", "createTransformFeedback", "deleteTransformFeedback",
-             "isTransformFeedback", "bindTransformFeedback", "beginTransformFeedback", "endTransformFeedback",
-             "transformFeedbackVaryings", "getTransformFeedbackVarying", "pauseTransformFeedback",
-             "resumeTransformFeedback", "bindBufferBase", "bindBufferRange", "getIndexedParameter",
-             "getUniformIndices", "getActiveUniforms", "getUniformBlockIndex", "getActiveUniformBlockParameter",
-             "getActiveUniformBlockName", "uniformBlockBinding", "createVertexArray", "deleteVertexArray",
-             "isVertexArray", "bindVertexArray"]
+    lista = ["copyBufferSubData","getBufferSubData","blitFramebuffer","framebufferTextureLayer","getInternalformatParameter","invalidateFramebuffer","invalidateSubFramebuffer","readBuffer","renderbufferStorageMultisample","texStorage2D","texStorage3D","texImage3D","texSubImage3D","copyTexSubImage3D","compressedTexImage3D","compressedTexSubImage3D","getFragDataLocation","uniform1ui","uniform2ui","uniform3ui","uniform4ui","uniform1uiv","uniform2uiv","uniform3uiv","uniform4uiv","uniformMatrix2x3fv","uniformMatrix3x2fv","uniformMatrix2x4fv","uniformMatrix4x2fv","uniformMatrix3x4fv","uniformMatrix4x3fv","vertexAttribI4i","vertexAttribI4iv","vertexAttribI4ui","vertexAttribI4uiv","vertexAttribIPointer","vertexAttribDivisor","drawArraysInstanced","drawElementsInstanced","drawRangeElements","drawBuffers","clearBufferiv","clearBufferuiv","clearBufferfv","clearBufferfi","createQuery","deleteQuery","isQuery","beginQuery","endQuery","getQuery","getQueryParameter","createSampler","deleteSampler","isSampler","bindSampler","samplerParameteri","samplerParameterf","getSamplerParameter","fenceSync","isSync","deleteSync","clientWaitSync","waitSync","getSyncParameter","createTransformFeedback","deleteTransformFeedback","isTransformFeedback","bindTransformFeedback","beginTransformFeedback","endTransformFeedback","transformFeedbackVaryings","getTransformFeedbackVarying","pauseTransformFeedback","resumeTransformFeedback","bindBufferBase","bindBufferRange","getIndexedParameter","getUniformIndices","getActiveUniforms","getUniformBlockIndex","getActiveUniformBlockParameter","getActiveUniformBlockName","uniformBlockBinding","createVertexArray","deleteVertexArray","isVertexArray","bindVertexArray"]
     performance = unmasked = res_num_webgl_calls = 0
     
     if code.find(".performance") != -1:
-        performance += 1
+        performance+= 1
     if code.find(".mozPerformance") != -1:
-        performance += 1
+        performance+= 1
     if code.find(".msPerformance") != -1:
-        performance += 1
+        performance+= 1
     if code.find("UNMASKED_RENDERER_WEBGL") != -1:
-        unmasked += 1
+        unmasked +=1 
     if code.find("UNMASKED_VENDOR_WEBGL") != -1:
-        unmasked += 1
+        unmasked +=1
 
     for l in lista:
         if code.find(l) != -1:
@@ -757,10 +716,8 @@ def get_webgl_fingerprint(url):
         if unmasked > 0:
             total += 1
 
-        resource.add(tracking, {"quantity": total,
-                                "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
-        url.add(tracking, {"quantity": total,
-                           "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        resource.add(tracking, {"quantity": total, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        url.add(tracking, {"quantity": total, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
     return total
 
 
@@ -772,7 +729,6 @@ def check_tracking(url, domain):
     get_canvas_fingerprinting(url)
     get_mouse_fingerprinting(url)
     get_webgl_fingerprint(url)
-
 
 def calculate_intrusion_level(domain):
     intrusion_level = 0
@@ -796,3 +752,100 @@ def calculate_intrusion_level(domain):
             intrusion_level += trackings_in_domain[t]
 
     return intrusion_level
+
+def main(process):
+    """ Main process in charge of taking work from the queue and extracting info if needed.
+
+    While there is remaining work in the queue continuously passes new jobs until its empty.
+    If the 'no-update' argument is false it cleans the previously URL's linked for the current domain. """
+
+    # Load the DB manager for this process
+    db = Db()
+
+    while True:
+        try:
+            queue_lock.acquire()
+            site = work_queue.get(False)
+            queue_lock.release()
+        except queue.Empty:
+            queue_lock.release()
+            exit(0)
+        except Exception as e:
+            logger.error("[Worker %d] %s" % (process, str(e)))
+        else:
+            domain = Connector(db, "domain")
+            domain.load(site)
+            setproctitle("ORM - Worker #%d - %s" % (process, domain.values["name"]))
+            logger.info('[Worker %d] Domain %s' % (process, domain.values["name"]))
+            url_list = domain.get("url", order="url_id")
+            for url in url_list:
+                check_tracking(url, domain)
+
+argument_parser = argparse.ArgumentParser(description='Tracking parser')
+argument_parser.add_argument('-t', dest='threads', type=int, default=0,
+                    help='Number of threads/processes to span (Default: Auto)')
+parser.add_argument('-start', dest='current', type=int, default=0,
+                    help='Id for the starting domain (Default: 0).')
+
+if __name__ == '__main__':
+    """ Main process """
+
+    # Take arguments
+    args = argument_parser.parse_args()
+    threads = args.threads
+    # If thread parameter is auto get the (total-1) or the available CPU's, whichever is smaller
+    logger.info("Calculating processes...")
+    if not threads:
+        cpu = cpu_count()
+        try:
+            available_cpu = len(os.sched_getaffinity(0))
+        except Exception as e:
+            logger.warning("Platform not recognized. Getting the maximum CPU's")
+            available_cpu = cpu
+        # Save 1 CPU for other purposes
+        if cpu > 1 and cpu == available_cpu:
+            threads = cpu - 1
+        else:
+            threads = available_cpu
+    logger.info("Processes to run: %d " % threads)
+    # Initialize job queue
+    work_queue = Queue()
+    queue_lock = Lock()
+
+    # Create and call the workers
+    logger.debug("[Main process] Spawning new workers...")
+    with Pool(processes=threads) as pool:
+        p = pool.map_async(main, [i for i in range(int(threads))])
+
+        pending = ["0"]
+        current = int(args.current)
+        while True:
+            # Insert new work into queue if needed.
+            queue_lock.acquire()
+            qsize = work_queue.qsize()
+            queue_lock.release()
+            if qsize < (2 * threads):
+                logger.debug("[Main process] Getting work")
+                now = datetime.now(timezone.utc)
+                td = timedelta(-1 * update_threshold)
+                period = now + td
+                rq = 'SELECT id FROM domain'
+                if args.priority:
+                    rq += ' WHERE id > %d' % current
+                rq += ' AND id NOT IN (%s)' % ','.join(pending)
+                rq += ' ORDER BY id ASC LIMIT %d ' % (2 * threads)
+                pending = ["0"]
+                database = Db()
+                results = database.custom(rq)
+                database.close()
+                # If no new work wait ten seconds and retry
+                if len(results) > 0:
+                    # Initialize job queue
+                    logger.debug("[Main process] Enqueuing work")
+                    queue_lock.acquire()
+                    for result in results:
+                        work_queue.put(result["id"])
+                        pending.append(str(result["id"]))
+                        current = result["id"]
+                    queue_lock.release()
+            time.sleep(1)
