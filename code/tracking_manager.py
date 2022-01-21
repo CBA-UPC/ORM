@@ -784,7 +784,7 @@ def main(process):
 argument_parser = argparse.ArgumentParser(description='Tracking parser')
 argument_parser.add_argument('-t', dest='threads', type=int, default=0,
                     help='Number of threads/processes to span (Default: Auto)')
-parser.add_argument('-start', dest='current', type=int, default=0,
+argument_parser.add_argument('-start', dest='current', type=int, default=0,
                     help='Id for the starting domain (Default: 0).')
 
 if __name__ == '__main__':
