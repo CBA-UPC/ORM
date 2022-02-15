@@ -106,6 +106,10 @@ def main(process):
 
 
 parser = argparse.ArgumentParser(description='Online Resource Mapper (ORM)')
+parser.add_argument('-s', dest='start', type=int, default=1,
+                    help='Domain id to start the information collection process (Default: 1)')
+parser.add_argument('-e', dest='end', type=int, default=0,
+                    help='Domain id to end the information collection process (Default: All)')
 parser.add_argument('-t', dest='threads', type=int, default=0,
                     help='Number of threads/processes to span (Default: Auto)')
 parser.add_argument('-v', dest='verbose', type=int, default=3,
@@ -174,12 +178,20 @@ if __name__ == '__main__':
                 td = timedelta(-1 * update_threshold)
                 period = now + td
                 rq = 'SELECT id FROM domain'
-                if args.priority:
-                    rq += ' WHERE priority = 1'
+                if args.start != 1:
+                    rq += ' WHERE id >= args.start'
+                    if args.end != 0:
+                        rq += ' AND id <= args.end'
+                    rq += ' ORDER BY id ASC'
+                elif args.end != 0:
+                    rq += ' WHERE id <= args.end ORDER BY id ASC'
                 else:
-                    rq += ' WHERE update_timestamp < "%s"' % (period.strftime('%Y-%m-%d %H:%M:%S'))
-                rq += ' AND id NOT IN (%s)' % ','.join(pending)
-                rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (2 * threads)
+                    if args.priority:
+                        rq += ' WHERE priority = 1'
+                    else:
+                        rq += ' WHERE update_timestamp < "%s"' % (period.strftime('%Y-%m-%d %H:%M:%S'))
+                    rq += ' AND id NOT IN (%s)' % ','.join(pending)
+                    rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (2 * threads)
                 #print(rq)
                 pending = ["0"]
                 database = Db()
