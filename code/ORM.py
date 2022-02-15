@@ -132,6 +132,8 @@ if __name__ == '__main__':
     # Take arguments
     args = parser.parse_args()
     cache = args.cache
+    start = args.start
+    end = args.end
     update_ublock = args.update_ublock
     update_threshold = args.update_threshold
     threads = args.threads
@@ -167,7 +169,7 @@ if __name__ == '__main__':
         p = pool.map_async(main, [i for i in range(int(threads))])
 
         pending = ["0"]
-        while True:
+        while start > 0 and end >= 0:
             # Insert new work into queue if needed.
             queue_lock.acquire()
             qsize = work_queue.qsize()
@@ -178,13 +180,16 @@ if __name__ == '__main__':
                 td = timedelta(-1 * update_threshold)
                 period = now + td
                 rq = 'SELECT id FROM domain'
-                if args.start != 1:
-                    rq += ' WHERE id >= args.start'
+                if start != 1:
+                    rq += ' WHERE id >= %d' % start
+                    start = 0
                     if args.end != 0:
-                        rq += ' AND id <= args.end'
+                        rq += ' AND id <= %d' % end 
+                        end = -1
                     rq += ' ORDER BY id ASC'
                 elif args.end != 0:
-                    rq += ' WHERE id <= args.end ORDER BY id ASC'
+                    rq += ' WHERE id <= %d ORDER BY id ASC' % end
+                    end = -1
                 else:
                     if args.priority:
                         rq += ' WHERE priority = 1'
