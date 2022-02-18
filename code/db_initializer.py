@@ -442,6 +442,11 @@ def init_tracking():
     tracking.values["intrusion_level"] = 6
     tracking.save()
 
+    tracking = Connector(database, "tracking")
+    tracking.load(hash_string("WebGL fingerprinting"))
+    tracking.values["name"] = "WebGL fingerprinting"
+    tracking.values["intrusion_level"] = 6
+    tracking.save()
 
 def init_fonts():
     """ Initializes de font table """
