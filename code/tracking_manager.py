@@ -619,6 +619,10 @@ def get_mouse_fingerprinting(url):
     if not resource.values["file"]:
         return url_tracking, 0
 
+    # Finish if the file is not a JS script
+    if resource.values["type"] != "script":
+        return url_tracking, 0
+          
     # Return DB value if already computed
     tracking_list = resource.get("tracking", order="tracking_id")
     for tr in tracking_list:
