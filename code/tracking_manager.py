@@ -730,11 +730,17 @@ def get_webgl_fingerprint(url):
 
 def check_tracking(url, domain):
     """ Checks all the possible tracking for the given url and domain. """
+    logger.info("Looking URL %s for HTTP cookies" % url.values["url"])
     get_http_cookies(url, domain)
+    logger.info("Looking URL %s for JS cookies" % url.values["url"])
     get_js_cookies(url)
+    logger.info("Looking URL %s for font fingerprinting" % url.values["url"])
     get_font_fingerprinting(url)
+    logger.info("Looking URL %s for canvas fingerprinting" % url.values["url"])
     get_canvas_fingerprinting(url)
+    logger.info("Looking URL %s for mouse fingerprinting" % url.values["url"])
     get_mouse_fingerprinting(url)
+    logger.info("Looking URL %s for WebGL fingerprinting" % url.values["url"])
     get_webgl_fingerprint(url)
 
 def calculate_intrusion_level(domain):
@@ -789,6 +795,7 @@ def main(process):
                 resource = Connector(db, "resource")
                 resource.load(url.values["resource_id"])
                 if resource.values["size"] > 0:
+                    logger.info('[Worker %d] Domain %s URL %s' % (process, domain.values["name"], url.values["url"]))
                     check_tracking(url, domain)
 
 argument_parser = argparse.ArgumentParser(description='Tracking parser')
@@ -823,7 +830,7 @@ if __name__ == '__main__':
     queue_lock = Lock()
 
     # Create and call the workers
-    logger.debug("[Main process] Spawning new workers...")
+    logger.info("[Main process] Spawning new workers...")
     with Pool(processes=threads) as pool:
         p = pool.map_async(main, [i for i in range(int(threads))])
 
@@ -835,7 +842,7 @@ if __name__ == '__main__':
             qsize = work_queue.qsize()
             queue_lock.release()
             if qsize < (2 * threads):
-                logger.debug("[Main process] Getting work")
+                logger.info("[Main process] Getting work")
                 rq = 'SELECT id FROM domain'
                 rq += ' WHERE id > %d' % current
                 rq += ' AND id NOT IN (%s)' % ','.join(pending)
@@ -847,7 +854,7 @@ if __name__ == '__main__':
                 # If no new work wait ten seconds and retry
                 if len(results) > 0:
                     # Initialize job queue
-                    logger.debug("[Main process] Enqueuing work")
+                    logger.info("[Main process] Enqueuing work")
                     queue_lock.acquire()
                     for result in results:
                         work_queue.put(result["id"])
