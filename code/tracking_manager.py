@@ -782,7 +782,10 @@ def main(process):
             logger.info('[Worker %d] Domain %s' % (process, domain.values["name"]))
             url_list = domain.get("url", order="url_id")
             for url in url_list:
-                check_tracking(url, domain)
+                resource = Connector(db, "resource")
+                resource.load(url.values["resource_id"])
+                if resource.values["size"] > 0:
+                    check_tracking(url, domain)
 
 argument_parser = argparse.ArgumentParser(description='Tracking parser')
 argument_parser.add_argument('-t', dest='threads', type=int, default=0,
