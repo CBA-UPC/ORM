@@ -782,7 +782,7 @@ def main(process):
             queue_lock.release()
         except queue.Empty:
             queue_lock.release()
-            exit(0)
+            #exit(0)
         except Exception as e:
             logger.error("[Worker %d] %s" % (process, str(e)))
         else:
@@ -794,7 +794,7 @@ def main(process):
             for url in url_list:
                 resource = Connector(db, "resource")
                 resource.load(url.values["resource_id"])
-                if resource.values["size"] > 0:
+                if int(resource.values["size"]) > 0:
                     logger.info('[Worker %d] Domain %s URL %s' % (process, domain.values["name"], url.values["url"]))
                     check_tracking(url, domain)
 
