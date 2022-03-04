@@ -798,6 +798,7 @@ def main(process):
                 if int(resource.values["size"]) > 0:
                     logger.info('[Worker %d] Domain %s URL %s' % (process, domain.values["name"], url.values["url"]))
                     check_tracking(url, domain)
+            calculate_intrusion_level(domain)
 
 argument_parser = argparse.ArgumentParser(description='Tracking parser')
 argument_parser.add_argument('-t', dest='threads', type=int, default=0,
