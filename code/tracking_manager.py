@@ -806,6 +806,8 @@ argument_parser.add_argument('-t', dest='threads', type=int, default=0,
                     help='Number of threads/processes to span (Default: Auto)')
 argument_parser.add_argument('-start', dest='current', type=int, default=0,
                     help='Id for the starting domain (Default: 0).')
+argument_parser.add_argument('-end', dest='end', type=int, default=0,
+                    help='Id for the starting domain (Default: All).')
 
 if __name__ == '__main__':
     """ Main process """
@@ -848,6 +850,8 @@ if __name__ == '__main__':
                 logger.info("[Main process] Getting work")
                 rq = 'SELECT id FROM domain'
                 rq += ' WHERE id > %d' % current
+                if args.end > 0:
+                   rq += ' AND id <= %d' % args.end
                 rq += ' AND id NOT IN (%s)' % ','.join(pending)
                 rq += ' ORDER BY id ASC LIMIT %d ' % (2 * threads)
                 pending = ["0"]
