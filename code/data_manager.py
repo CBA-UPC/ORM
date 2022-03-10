@@ -34,7 +34,7 @@ from asn1crypto import pem
 from db_manager import Db, Connector
 from tracking_manager import check_tracking, calculate_intrusion_level
 from utils import download_file, hash_file, lsh_file, hash_string, utc_now
-from utils import certificate_to_json, extract_location
+from utils import certificate_to_json, extract_location, clean_subdomain
 
 logging.config.fileConfig('logging.conf')
 
@@ -94,6 +94,14 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
             url.values["url"] = elem["url"]
             url.values["method"] = elem["method"]
             url.values["type"] = elem["type"]
+            lvl2_domain = clean_subdomain(elem["url"])
+            host = Connector(db, "host")
+            if not host.load(hash_string(lvl2_domain)):
+                host.values["name"] = lvl2_domain
+                host.values["update_timestamp"] = t
+                if not host.save():
+                    host.load(hash_string(lvl2_domain))
+            url.values["host_id"] = host.values["id"]
             if elem["blocked"]:
                 url.values["blocked"] = 1
             if "from_cache" in elem.keys():
