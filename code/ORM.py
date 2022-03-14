@@ -194,7 +194,7 @@ if __name__ == '__main__':
                     if args.priority:
                         rq += ' WHERE priority = 1'
                     else:
-                        rq += ' WHERE update_timestamp < "%s"' % (period.strftime('%Y-%m-%d %H:%M:%S'))
+                        rq += ' WHERE priority = 0 AND update_timestamp < "%s"' % (period.strftime('%Y-%m-%d %H:%M:%S'))
                     rq += ' AND id NOT IN (%s)' % ','.join(pending)
                     rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (2 * threads)
                 #print(rq)
