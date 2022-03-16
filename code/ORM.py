@@ -100,19 +100,11 @@ def main(process):
                     extra_tries -= 1
                     driver[0], completed, repeat = visit_site(db, process, driver[0], domain,
                                                               driver[1], temp_folder, cache, update_ublock, geo_db)
-                if domain.values["priority"] > 1:
-                    domain.values["priority"] = 0
-                    domain.values.pop("update_timestamp")
-                    domain.save()
                 # TODO: Try to remove websites when unable to get info??
                 #  -> if a connection problem happens all the websites will be removed...
 
 
 parser = argparse.ArgumentParser(description='Online Resource Mapper (ORM)')
-parser.add_argument('-s', dest='start', type=int, default=1,
-                    help='Domain id to start the information collection process (Default: 1)')
-parser.add_argument('-e', dest='end', type=int, default=0,
-                    help='Domain id to end the information collection process (Default: All)')
 parser.add_argument('-t', dest='threads', type=int, default=0,
                     help='Number of threads/processes to span (Default: Auto)')
 parser.add_argument('-v', dest='verbose', type=int, default=3,
@@ -135,8 +127,6 @@ if __name__ == '__main__':
     # Take arguments
     args = parser.parse_args()
     cache = args.cache
-    start = args.start
-    end = args.end
     update_ublock = args.update_ublock
     update_threshold = args.update_threshold
     threads = args.threads
@@ -172,7 +162,7 @@ if __name__ == '__main__':
         p = pool.map_async(main, [i for i in range(int(threads))])
 
         pending = ["0"]
-        while start > 0 and end >= 0:
+        while True:
             # Insert new work into queue if needed.
             queue_lock.acquire()
             qsize = work_queue.qsize()
@@ -183,35 +173,29 @@ if __name__ == '__main__':
                 td = timedelta(-1 * update_threshold)
                 period = now + td
                 rq = 'SELECT id FROM domain'
-                if start != 1:
-                    rq += ' WHERE id >= %d' % start
-                    start = 0
-                    if args.end != 0:
-                        rq += ' AND id <= %d' % end 
-                        end = -1
-                    rq += ' ORDER BY id ASC'
-                elif args.end != 0:
-                    rq += ' WHERE id <= %d ORDER BY id ASC' % end
-                    end = -1
+                if args.priority:
+                    rq += ' WHERE priority = 1'
                 else:
-                    if args.priority:
-                        rq += ' WHERE priority = 1'
-                    else:
-                        rq += ' WHERE priority = 0 AND update_timestamp < "%s"' % (period.strftime('%Y-%m-%d %H:%M:%S'))
-                    rq += ' AND id NOT IN (%s)' % ','.join(pending)
-                    rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (2 * threads)
-                #print(rq)
+                    rq += ' WHERE priority = 0 AND update_timestamp < "%s"' % (period.strftime('%Y-%m-%d %H:%M:%S'))
+                rq += ' AND id NOT IN (%s)' % ','.join(pending)
+                rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (2 * threads)
                 pending = ["0"]
                 database = Db()
                 results = database.custom(rq)
-                database.close()
                 # If no new work wait ten seconds and retry
                 if len(results) > 0:
                     # Initialize job queue
                     logger.debug("[Main process] Enqueuing work")
                     queue_lock.acquire()
                     for result in results:
+                        if args.priority:
+                            domain = Connector(database, "domain")
+                            domain.load(int(result["id"]))
+                            domain.values["priority"] = 0
+                            domain.values.pop("update_timestamp")
+                            domain.save()
                         work_queue.put(result["id"])
                         pending.append(str(result["id"]))
                     queue_lock.release()
+                database.close()
             time.sleep(1)
