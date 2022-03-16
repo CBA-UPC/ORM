@@ -744,28 +744,6 @@ def check_tracking(url, domain):
     logger.info("Looking URL %s for WebGL fingerprinting" % url.values["url"])
     get_webgl_fingerprint(url)
 
-def calculate_intrusion_level(domain):
-    intrusion_level = 0
-    trackings_in_domain = {}
-    urls = domain.get("url", order="url_id")
-    
-    for url in urls:
-        
-        trackings = url.get("tracking", order="tracking_id")
-        for track in trackings:
-            
-            if track.values["name"] in trackings_in_domain.keys():
-                trackings_in_domain[track.values["name"]] += track.values["intrusion_level"]
-            else:
-                trackings_in_domain[track.values["name"]] = track.values["intrusion_level"]
-    for t in trackings_in_domain:
-        
-        if trackings_in_domain[t] > 9:
-            intrusion_level += 9
-        else:
-            intrusion_level += trackings_in_domain[t]
-
-    return intrusion_level
 
 def main(process):
     """ Main process in charge of taking work from the queue and extracting info if needed.
@@ -798,8 +776,7 @@ def main(process):
                 if int(resource.values["size"]) > 0:
                     logger.info('[Worker %d] Domain %s URL %s' % (process, domain.values["name"], url.values["url"]))
                     check_tracking(url, domain)
-            domain.values["intrusion_level"] = calculate_intrusion_level(domain)
-            domain.save()
+
 
 argument_parser = argparse.ArgumentParser(description='Tracking parser')
 argument_parser.add_argument('-t', dest='threads', type=int, default=0,
