@@ -47,7 +47,7 @@ To explore more parameters execute "db_initializer --help".
 
 6) Execute [orm.py](code/ORM.py) to start parsing websites.
 
-Usage: orm.py -start 0 -end 1000 -t 4
+Usage: orm.py -start 1 -end 1000 -t 4
 
 The third parameter tells ORM how many threads to use to parse websites. 
 
