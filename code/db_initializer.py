@@ -490,23 +490,9 @@ if __name__ == '__main__':
     print("Reading domain csv files")
     alexa_sites = config.load_csv(args.filename, 1)[slice(start - 1, end - 1, None)]
     alexa_websites = len(alexa_sites)
-    majestic_sites = config.load_csv(args.filename2, 2)[slice(start - 1, end - 1, None)]
-    majestic_websites = len(majestic_sites)
     sites = {}
     for i, domain in enumerate(alexa_sites, start):
-        sites[domain] = {"alexa_rank": i, "majestic_rank": None, "name": domain}
-    only_alexa = alexa_websites
-    only_majestic = 0
-    both = 0
-    for i, domain in enumerate(majestic_sites, start):
-        if domain not in sites.keys():
-            sites[domain] = {"alexa_rank": None, "majestic_rank": i, "name": domain}
-            only_majestic += 1
-        else:
-            sites[domain]["majestic_rank"] = i
-            both += 1
-            only_alexa -= 1
-    print("Alexa: %d | Majestic: %d | Both: %d" % (only_alexa, only_majestic, both))
+        sites[domain] = {"alexa_rank": i, "name": domain}
     print("Initializing database")
     database = Db()
     init_plugins()
