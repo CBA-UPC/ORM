@@ -11,3 +11,4 @@ tldextract>=2.2.2
 asn1crypto>=1.4.0
 esprima>=4.0.1
 python-dateutil>=2.8.1
+setproctitle>=1.2.2
