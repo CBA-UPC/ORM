@@ -29,6 +29,8 @@ from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException
 from selenium.common.exceptions import NoSuchWindowException
 from selenium.webdriver.common.alert import Alert
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 
 # Own modules
 from utils import utc_now
@@ -58,12 +60,16 @@ def get_extension_uuid(path, identifier):
 def build_driver(plugin, cache, update_ublock, process):
     """ Creates the selenium driver to be used by the script and loads the corresponding plugin if needed. """
     try:
-        profile = webdriver.FirefoxProfile()
+        profile = FirefoxProfile()
         # Disable browser content protection measures
-        profile.set_preference("privacy.trackingprotection.enabled", False)
-        profile.set_preference("browser.contentblocking.enabled", False)
         profile.set_preference("dom.storage.default_quota", 51200)
         profile.set_preference("dom.storage.default_site_quota", 51200)
+        profile.set_preference("privacy.trackingprotection.enabled", False)
+        profile.set_preference("browser.contentblocking.enabled", False)
+        profile.set_preference("browser.contentblocking.category", "standard")
+        profile.set_preference("browser.contentblocking.database.enabled", False)
+        profile.set_preference("browser.contentblocking.fingerprinting.preferences.ui.enabled", False)
+        profile.set_preference("browser.contentblocking.cryptomining.preferences.ui.enabled", False)
 
         # Disable caches and enables private mode for stateless scraps
         if not cache:
@@ -72,7 +78,9 @@ def build_driver(plugin, cache, update_ublock, process):
             profile.set_preference("browser.cache.offline.enable", False)
             profile.set_preference("network.http.use-cache", False)
 
-        driver = webdriver.Firefox(profile, log_path="log/geckodriver.log")
+        opts = Options()
+        opts.profile = profile
+        driver = webdriver.Firefox(options=opts, log_path="log/geckodriver.log")
         driver.set_page_load_timeout(60)
     except Exception as e:
         # logger.error(e)
