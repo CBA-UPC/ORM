@@ -475,8 +475,6 @@ parser.add_argument('start', type=int, default=0, help='Start index (0 indexed)'
 parser.add_argument('end', type=int, help='End index (not included)', nargs='?')
 parser.add_argument('-f', dest='filename', type=str, default='../assets/alexa/top-1m.csv.zip',
                     help='File containing one domain per line or an alexa csv. Can be a zip or gz file')
-parser.add_argument('-f2', dest='filename2', type=str, default='../assets/majestic/majestic_million.csv.zip',
-                    help='File containing one domain per line or a majestic_million csv. Can be a zip or gz file')
 
 
 if __name__ == '__main__':
