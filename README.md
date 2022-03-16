@@ -5,7 +5,7 @@ During our experiments we found that only one instance of the system can scrap i
 
 ## Setup
 ### Requirements
-We strongly recommend the use of Python 3.7, since lower versions may not support the required modules.
+We strongly recommend the use of at least Python 3.7, since lower versions may not support the required modules.
 The following packages are required:
 * wheel>=0.36.2
 * beautifulsoup4 >= 4.8.2
