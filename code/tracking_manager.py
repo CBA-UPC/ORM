@@ -175,6 +175,8 @@ def get_http_cookies(url, main_domain):
         tracking = Connector(db, "tracking")
         tracking.load(hash_string(tracking_value))
         url.add(tracking, {"quantity": tracking_list[tracking_value], "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        url.values["blocked"] = 1
+        url.save()
     
     return tracking_list
 
@@ -219,6 +221,8 @@ def get_js_cookies(url):
     if cookies > 0:
         url.add(tracking, {"quantity": cookies, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
         resource.add(tracking, {"quantity": cookies, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        url.values["blocked"] = 1
+        url.save()
     return cookies
 
 
@@ -272,6 +276,8 @@ def get_font_fingerprinting(url):
     if file_fonts > 28 and file_offset_height and file_offset_width:
         url.add(tracking, {"quantity": file_fonts, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
         resource.add(tracking, {"quantity": file_fonts, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        url.values["blocked"] = 1
+        url.save()
     return file_fonts
 
 
@@ -384,9 +390,13 @@ def get_canvas_fingerprinting(url):
     if canvas1:
         resource.add(tracking_big, {"quantity": canvas1, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
         url.add(tracking_big, {"quantity": canvas1, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        url.values["blocked"] = 1
+        url.save()
     if canvas2:
         resource.add(tracking_small, {"quantity": canvas2, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
         url.add(tracking_small, {"quantity": canvas2, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+        url.values["blocked"] = 1
+        url.save()
     return canvas1, canvas2
 
 
@@ -608,6 +618,8 @@ def get_mouse_fingerprinting(url):
             if re.search(domain, url.values["url"]):
                 url.add(tracking, {"update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
                 url_tracking = 1
+                url.values["blocked"] = 1
+                url.save()
 
     # Finish if resource does not exist
     if not url.values["resource_id"]:
