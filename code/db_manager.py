@@ -112,7 +112,7 @@ class Db(object):
         self.conn.close()
 
     def initialize(self, sites, timestamp):
-        """ initializes the database with the Alexa's list domain information. """
+        """ initializes the database with the Tranco's list domain information. """
 
         printed = 0
         for domain in sites.keys():
@@ -120,8 +120,8 @@ class Db(object):
             printed += 1
             print(str(printed) + ": " + sites[domain]["name"])
             hash_key = hash_string(domain)
-            element = {"hash": hash_key, "name": domain, "alexa_rank": sites[domain]["alexa_rank"],
-                       "majestic_rank": sites[domain]["majestic_rank"], "insert_date": timestamp}
+            element = {"hash": hash_key, "name": domain, "tranco_rank": sites[domain]["tranco_rank"],
+                       "insert_date": timestamp}
             element_id = self.custom(query="SELECT id FROM domain WHERE domain.hash = %s", values=[hash_key])
             if not element_id:
                 self.insert("domain", element)
