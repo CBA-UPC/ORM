@@ -473,8 +473,8 @@ def init_mouse_tracking_domains():
 parser = argparse.ArgumentParser(description='Initializes the ORM database')
 parser.add_argument('start', type=int, default=0, help='Start index (0 indexed)')
 parser.add_argument('end', type=int, help='End index (not included)', nargs='?')
-parser.add_argument('-f', dest='filename', type=str, default='../assets/alexa/top-1m.csv.zip',
-                    help='File containing one domain per line or an alexa csv. Can be a zip or gz file')
+parser.add_argument('-f', dest='filename', type=str, default='../assets/tranco/tranco_W9359-1m.csv.zip',
+                    help='File containing one domain per line or a Tranco List csv. Can be a zip or gz file')
 
 
 if __name__ == '__main__':
@@ -486,11 +486,11 @@ if __name__ == '__main__':
     modified = int(os.path.getmtime(args.filename))
     timestamp = datetime.utcfromtimestamp(modified).strftime('%Y-%m-%d %H:%M:%S')
     print("Reading domain csv files")
-    alexa_sites = config.load_csv(args.filename, 1)[slice(start - 1, end - 1, None)]
-    alexa_websites = len(alexa_sites)
+    tranco_sites = config.load_csv(args.filename, 1)[slice(start - 1, end - 1, None)]
+    tranco_websites = len(tranco_sites)
     sites = {}
-    for i, domain in enumerate(alexa_sites, start):
-        sites[domain] = {"alexa_rank": i, "name": domain}
+    for i, domain in enumerate(tranco_sites, start):
+        sites[domain] = {"tranco_rank": i, "name": domain}
     print("Initializing database")
     database = Db()
     init_plugins()
