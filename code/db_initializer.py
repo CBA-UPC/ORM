@@ -490,6 +490,7 @@ if __name__ == '__main__':
     tranco_websites = len(tranco_sites)
     sites = {}
     for i, domain in enumerate(tranco_sites, start):
+        domain = domain.replace("\n\r", "").replace("\r", "").replace("\n", "")
         sites[domain] = {"tranco_rank": i, "name": domain}
     print("Initializing database")
     database = Db()
