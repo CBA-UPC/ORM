@@ -221,7 +221,6 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
 
         # Check tracking for the url and related resource
         check_tracking(url, domain)
-    domain.values["intrusion_level"] = calculate_intrusion_level(domain)
     domain.save()
 
 
