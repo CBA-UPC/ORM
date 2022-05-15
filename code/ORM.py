@@ -66,7 +66,7 @@ def main(process):
         driver = build_driver(plugin, cache, update_ublock, process)
         while not driver:
             driver = build_driver(plugin, cache, update_ublock, process)
-        driver.set_page_load_timeout(30)
+        driver.set_page_load_timeout(60)
         driver_list.append([driver, plugin])
 
     if not driver_list:
@@ -75,8 +75,7 @@ def main(process):
     while True:
         try:
             queue_lock.acquire()
-            site = work_queue.get(block=True, timeout=1)
-            time.sleep(1)
+            site = work_queue.get(block=False)
             queue_lock.release()
         except queue.Empty:
             queue_lock.release()
@@ -162,6 +161,7 @@ if __name__ == '__main__':
         p = pool.map_async(main, [i for i in range(int(threads))])
 
         pending = ["0"]
+        last_id = 0
         while True:
             # Insert new work into queue if needed.
             queue_lock.acquire()
@@ -178,6 +178,7 @@ if __name__ == '__main__':
                 else:
                     rq += ' WHERE priority = 0 AND update_timestamp < "%s"' % (period.strftime('%Y-%m-%d %H:%M:%S'))
                 rq += ' AND id NOT IN (%s)' % ','.join(pending)
+                rq += ' AND id > %s' % last_id
                 rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (2 * threads)
                 pending = ["0"]
                 database = Db()
@@ -196,6 +197,7 @@ if __name__ == '__main__':
                             domain.save()
                         work_queue.put(result["id"])
                         pending.append(str(result["id"]))
+                        last_id = int(result["id"])
                     queue_lock.release()
                 database.close()
             time.sleep(1)
