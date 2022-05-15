@@ -427,6 +427,8 @@ if __name__ == '__main__':
     # Take arguments
     args = parser.parse_args()
     threads = args.threads
+    start = args.start
+    end = args.end
     input_file = args.input_file
     v = args.verbose
     if verbose[str(v)]:
@@ -452,7 +454,7 @@ if __name__ == '__main__':
     work_queue_lock = Lock()
     result_queue_lock = Lock()
     parent_pipe, child_pipe = Pipe()
-    last_resource_id = -1
+    last_resource_id = start - 1
 
     # Create and call the workers
     logger.debug("[Main process] Spawning new workers...")
@@ -478,7 +480,7 @@ if __name__ == '__main__':
                 while True:
                     time.sleep(1)
             else:        
-                while True:
+                while ((end > 0 and last_resource_id < end) or end < 0):
                     ts, sc = print_remaining(ts, sc, "Codeset queue size:")
                     # Insert new work into queue if needed.
                     work_queue_lock.acquire()
@@ -490,6 +492,8 @@ if __name__ == '__main__':
                         rq = 'SELECT id, type, file FROM resource WHERE split = 0 AND size > 0 '
                         rq += ' AND type IN ("frame", "script")'
                         rq += ' AND id > %d' % last_resource_id
+                        if end > 0:
+                            rq += ' AND id <= %d' % end
                         rq += ' ORDER BY id LIMIT 200'
                         results = database.custom(rq)
                         database.close()
@@ -502,6 +506,8 @@ if __name__ == '__main__':
                             for result in results:
                                 work_queue.put({"id": result["id"], "type": result["type"], "file": result["file"]})
                             work_queue_lock.release()
+                        elif work_queue.empty():
+                            end = 0
                     time.sleep(1)
         except KeyboardInterrupt:
             logger.info("[Main process] Keyboard interrupt received. Clearing work queue...")
@@ -514,18 +520,18 @@ if __name__ == '__main__':
                     remaining = False
             work_queue_lock.release()
 
-            # Tell the db worker to finish when possible
-            logger.info("[Main process] Waiting for DB worker to save collected info...")
-            parent_pipe.send("Finish")
+        # Tell the db worker to finish when possible
+        logger.info("[Main process] Waiting for DB worker to save collected info...")
+        parent_pipe.send("Finish")
 
-            # Wait for the db workers to finish
-            finished_processes = []
-            while len(finished_processes) < int(threads/3):
-                ts, sc = print_remaining(ts, sc, "Codeset queue size:")
-                if parent_pipe.poll(1):
-                    worker_number = parent_pipe.recv()
-                    if worker_number not in finished_processes:
-                        finished_processes.append(worker_number)
+        # Wait for the db workers to finish
+        finished_processes = []
+        while len(finished_processes) < int(threads/3):
+            ts, sc = print_remaining(ts, sc, "Codeset queue size:")
+            if parent_pipe.poll(1):
+                worker_number = parent_pipe.recv()
+                if worker_number not in finished_processes:
+                    finished_processes.append(worker_number)
 
-            logger.info("[Main process] Work finished. Bye bye!")
-            exit(0)
+        logger.info("[Main process] Work finished. Bye bye!")
+        exit(0)
