@@ -27,12 +27,15 @@ def print_remaining(last_ts, sec, msg):
     now = time.time()
     dif = now - last_ts
     if dif > 1:
+        work_queue_lock.acquire()
+        work_size = result_queue.qsize()
+        work_queue_lock.release()
         result_queue_lock.acquire()
         result_size = result_queue.qsize()
         result_queue_lock.release()
         sec += int(dif)
         print("", end='\r', flush=True)
-        print('[%s] %s %05d' % (utc_now(), msg, result_size), end='', flush=True)
+        print('[%s] %s | Work queue size: %05d | Codeset queue size: %05d' % (utc_now(), msg, work_size, result_size), end='', flush=True)
         return now, sec
     return last_ts, sec
 
@@ -469,20 +472,22 @@ if __name__ == '__main__':
                 with open(input_file, "r") as resource_list:
                     database = Db()
                     for rid in resource_list.readlines():
-                        results = database.custom("SELECT type, file FROM resource WHERE id = %d" % int(rid.replace("\n", "").replace("\r", "")))
+                        rid = int(rid.replace("\n", "").replace("\r", ""))
+                        results = database.custom("SELECT type, file FROM resource WHERE id = %d" % rid)
                         if len(results) > 0:
+                            ts, sc = print_remaining(ts, sc, "Enqueuing %s with id %d" % (result["type"], rid))
                             # Initialize job queue
                             result = results[0]
                             work_queue_lock.acquire()
                             work_queue.put({"id": rid, "type": result["type"], "file": result["file"]})
                             work_queue_lock.release()
-
+                    print("\n")
                 while True:
-                    ts, sc = print_remaining(ts, sc, "Codeset queue size:")
+                    ts, sc = print_remaining(ts, sc, "")
                     time.sleep(1)
             else:        
                 while ((end > 0 and last_resource_id < end) or end < 0):
-                    ts, sc = print_remaining(ts, sc, "Codeset queue size:")
+                    ts, sc = print_remaining(ts, sc, "")
                     # Insert new work into queue if needed.
                     work_queue_lock.acquire()
                     qsize = work_queue.qsize()
@@ -528,7 +533,7 @@ if __name__ == '__main__':
         # Wait for the db workers to finish
         finished_processes = []
         while len(finished_processes) < int(threads/3):
-            ts, sc = print_remaining(ts, sc, "Codeset queue size:")
+            ts, sc = print_remaining(ts, sc, "")
             if parent_pipe.poll(1):
                 worker_number = parent_pipe.recv()
                 if worker_number not in finished_processes:
