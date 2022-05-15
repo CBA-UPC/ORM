@@ -108,9 +108,9 @@ type_list = {"Program": 998,
              "JSXAttribute": 122,
              "JSXText": 124,
              "JSXClosingElement": 126,
-             "JSXExpressionContainer": 127,
-             "Import": 128,
-             "ImportDefaultSpecifier": 129}
+             "JSXExpressionContainer": 128,
+             "Import": 130,
+             "ImportDefaultSpecifier": 132}
 operator_list = {"++": 200,
                  "--": 201,
                  "+": 202,
@@ -299,6 +299,8 @@ parser.add_argument('-t', dest='threads', type=int, default=0,
                     help='Number of threads/processes to span (Default: Auto)')
 parser.add_argument('-start', dest='start', type=int, default=0, help='Start index (Default: First)')
 parser.add_argument('-end', dest='end', type=int, default=-1, help='End index (Default: Last)', nargs='?')
+parser.add_argument('-f', dest='input_file', type=str, default="",
+                    help='File containing a list of resource ids to codeset (Default: NULL)')
 parser.add_argument('-v', dest='verbose', type=int, default=3,
                     help='Verbose: 0=CRITICAL; 1=ERROR; 2=WARNING; 3=INFO; 4=DEBUG (Default: WARNING)')
 
@@ -425,6 +427,7 @@ if __name__ == '__main__':
     # Take arguments
     args = parser.parse_args()
     threads = args.threads
+    input_file = args.input_file
     v = args.verbose
     if verbose[str(v)]:
         logger.setLevel(verbose[str(v)])
@@ -459,33 +462,47 @@ if __name__ == '__main__':
 
         # Restore signal on main thread
         signal.signal(signal.SIGINT, original_sigint_handler)
-
         try:
-            while True:
-                ts, sc = print_remaining(ts, sc, "Codeset queue size:")
-                # Insert new work into queue if needed.
-                work_queue_lock.acquire()
-                qsize = work_queue.qsize()
-                work_queue_lock.release()
-                if qsize < (2 * threads):
-                    logger.debug("[Main process] Getting work")
+            if input_file:
+                with open(input_file, "r") as resource_list:
                     database = Db()
-                    rq = 'SELECT id, type, file FROM resource WHERE split = 0 AND size > 0 '
-                    rq += ' AND type IN ("frame", "script")'
-                    rq += ' AND id > %d' % last_resource_id
-                    rq += ' ORDER BY id LIMIT 200'
-                    results = database.custom(rq)
-                    database.close()
-                    # If no new work wait ten seconds and retry
-                    if len(results) > 0:
-                        # Initialize job queue
-                        last_resource_id = results[-1]["id"]
-                        logger.debug("[Main process] Enqueuing work")
-                        work_queue_lock.acquire()
-                        for result in results:
-                            work_queue.put({"id": result["id"], "type": result["type"], "file": result["file"]})
-                        work_queue_lock.release()
-                time.sleep(1)
+                    for rid in resource_list.readlines():
+                        results = database.custom("SELECT type, file FROM resource WHERE id = %d" % int(rid.replace("\n", "").replace("\r", "")))
+                        if len(results) > 0:
+                            # Initialize job queue
+                            result = results[0]
+                            work_queue_lock.acquire()
+                            work_queue.put({"id": rid, "type": result["type"], "file": result["file"]})
+                            work_queue_lock.release()
+
+                while True:
+                    time.sleep(1)
+            else:        
+                while True:
+                    ts, sc = print_remaining(ts, sc, "Codeset queue size:")
+                    # Insert new work into queue if needed.
+                    work_queue_lock.acquire()
+                    qsize = work_queue.qsize()
+                    work_queue_lock.release()
+                    if qsize < (2 * threads):
+                        logger.debug("[Main process] Getting work")
+                        database = Db()
+                        rq = 'SELECT id, type, file FROM resource WHERE split = 0 AND size > 0 '
+                        rq += ' AND type IN ("frame", "script")'
+                        rq += ' AND id > %d' % last_resource_id
+                        rq += ' ORDER BY id LIMIT 200'
+                        results = database.custom(rq)
+                        database.close()
+                        # If no new work wait ten seconds and retry
+                        if len(results) > 0:
+                            # Initialize job queue
+                            last_resource_id = results[-1]["id"]
+                            logger.debug("[Main process] Enqueuing work")
+                            work_queue_lock.acquire()
+                            for result in results:
+                                work_queue.put({"id": result["id"], "type": result["type"], "file": result["file"]})
+                            work_queue_lock.release()
+                    time.sleep(1)
         except KeyboardInterrupt:
             logger.info("[Main process] Keyboard interrupt received. Clearing work queue...")
             remaining = True
