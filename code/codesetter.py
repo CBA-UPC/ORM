@@ -478,6 +478,7 @@ if __name__ == '__main__':
                             work_queue_lock.release()
 
                 while True:
+                    ts, sc = print_remaining(ts, sc, "Codeset queue size:")
                     time.sleep(1)
             else:        
                 while ((end > 0 and last_resource_id < end) or end < 0):
