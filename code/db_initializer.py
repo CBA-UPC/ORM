@@ -44,8 +44,8 @@ def init_plugins():
     plugin.save()
     plugin.load(hash_string('Sustitutor'))
     plugin.values["name"] = "Sustitutor"
-    plugin.values["path"] = "../assets/plugin/sustitutor/sustitutor_0.1.4.xpi"
-    plugin.values["identifier"] = "sustitutor@upc.edu"
+    plugin.values["path"] = "../assets/plugin/substitutor/substitutor_0.1.4.xpi"
+    plugin.values["identifier"] = "substitutor@upc.edu"
     plugin.values["custom"] = 0
     plugin.values["url"] = ""
     plugin.values["xpath_to_click"] = ""
