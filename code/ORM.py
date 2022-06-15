@@ -123,7 +123,6 @@ if __name__ == '__main__':
 
     # Take arguments
     args = parser.parse_args()
-    cache = args.cache
     update_ublock = args.update_ublock
     threads = args.threads
     temp_folder = os.path.join(os.path.abspath("."), args.tmp)
