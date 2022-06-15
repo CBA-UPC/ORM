@@ -89,6 +89,7 @@ def build_driver(ublock, plugin, cache, update_ublock, process):
     try:
         time.sleep(2)
         # Load custom uBlock
+        logger.debug("(proc. %d) Loading ublock" % process)
         ublock_path = os.path.join(os.path.abspath("."), ublock.values["path"])
         driver.install_addon(ublock_path, temporary=True)
         time.sleep(2)
@@ -106,6 +107,7 @@ def build_driver(ublock, plugin, cache, update_ublock, process):
         if ublock.values["background"]:
             driver.get(ublock.values["background"].replace("UUID", uuid))
 
+        logger.debug("(proc. %d) Loading substitutor" % process)
         # Load received plugin (except for vanilla)
         if plugin.values["name"] != "Custom uBlock Origin (Firefox)" and plugin.values["name"] != "Vanilla":
             plugin_path = os.path.join(os.path.abspath("."), plugin.values["path"])
