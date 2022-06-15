@@ -62,14 +62,14 @@ def main(process):
 
     # Load the selenium driver with proper plugins
     driver_list = []
-    driver = build_driver(plugin_list[0], plugin_list[0], cache, update_ublock, process)
+    driver = build_driver(plugin_list[0], plugin_list[0], False, update_ublock, process)
     while not driver:
-        driver = build_driver(plugin_list[0], plugin_list[0], cache, update_ublock, process)
+        driver = build_driver(plugin_list[0], plugin_list[0], False, update_ublock, process)
     driver.set_page_load_timeout(60)
     driver_list.append([driver, plugin_list[0], plugin_list[0]])
-    driver = build_driver(plugin_list[0], plugin_list[1], cache, update_ublock, process)
+    driver = build_driver(plugin_list[0], plugin_list[1], False, update_ublock, process)
     while not driver:
-        driver = build_driver(plugin_list[0], plugin_list[1], cache, update_ublock, process)
+        driver = build_driver(plugin_list[0], plugin_list[1], False, update_ublock, process)
     driver.set_page_load_timeout(60)
     driver_list.append([driver, plugin_list[0], plugin_list[1]])
 
@@ -102,7 +102,7 @@ def main(process):
                 while extra_tries > 0 and not completed and repeat:
                     extra_tries -= 1
                     driver[0], completed, repeat = visit_site(db, process, driver[0], domain,
-                                                              driver[1], driver[2], temp_folder, cache, update_ublock, geo_db)
+                                                              driver[1], driver[2], temp_folder, False, update_ublock, geo_db)
                 # TODO: Try to remove websites when unable to get info??
                 #  -> if a connection problem happens all the websites will be removed...
 
