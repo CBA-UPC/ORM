@@ -42,8 +42,8 @@ def init_plugins():
     plugin.values["enabled"] = 1
     plugin.values["background"] = "moz-extension://UUID/background.html"
     plugin.save()
-    plugin.load(hash_string('Sustitutor'))
-    plugin.values["name"] = "Sustitutor"
+    plugin.load(hash_string('Substitutor'))
+    plugin.values["name"] = "Substitutor"
     plugin.values["path"] = "../assets/plugin/substitutor/substitutor_0.1.4.xpi"
     plugin.values["identifier"] = "substitutor@upc.edu"
     plugin.values["custom"] = 0
