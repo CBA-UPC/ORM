@@ -62,12 +62,16 @@ def main(process):
 
     # Load the selenium driver with proper plugins
     driver_list = []
-    for plugin in plugin_list:
-        driver = build_driver(plugin, cache, update_ublock, process)
-        while not driver:
-            driver = build_driver(plugin, cache, update_ublock, process)
-        driver.set_page_load_timeout(60)
-        driver_list.append([driver, plugin])
+    driver = build_driver(plugin_list[0], plugin_list[0], cache, update_ublock, process)
+    while not driver:
+        driver = build_driver(plugin_list[0], plugin_list[0], cache, update_ublock, process)
+    driver.set_page_load_timeout(60)
+    driver_list.append([driver, plugin_list[0], plugin_list[0]])
+    driver = build_driver(plugin_list[0], plugin_list[1], cache, update_ublock, process)
+    while not driver:
+        driver = build_driver(plugin_list[0], plugin_list[1], cache, update_ublock, process)
+    driver.set_page_load_timeout(60)
+    driver_list.append([driver, plugin_list[0], plugin_list[1]])
 
     if not driver_list:
         return 1
@@ -89,7 +93,7 @@ def main(process):
             for driver in driver_list:
                 # Clean the domain urls before crawling new info
                 request = "DELETE FROM domain_url WHERE domain_id = %d AND plugin_id = %d" % (domain.values["id"],
-                                                                                              driver[1].values['id'])
+                                                                                              driver[2].values['id'])
                 db.custom(request)
                 # Launch the crawl
                 extra_tries = 3
@@ -98,7 +102,7 @@ def main(process):
                 while extra_tries > 0 and not completed and repeat:
                     extra_tries -= 1
                     driver[0], completed, repeat = visit_site(db, process, driver[0], domain,
-                                                              driver[1], temp_folder, cache, update_ublock, geo_db)
+                                                              driver[1], driver[2], temp_folder, cache, update_ublock, geo_db)
                 # TODO: Try to remove websites when unable to get info??
                 #  -> if a connection problem happens all the websites will be removed...
 
@@ -110,14 +114,8 @@ parser.add_argument('-v', dest='verbose', type=int, default=3,
                     help='Verbose: 0=CRITICAL; 1=ERROR; 2=WARNING; 3=INFO; 4=DEBUG (Default: WARNING)')
 parser.add_argument('-d', dest='tmp', type=str, default='tmp',
                     help='Temporary folder (Default: "./tmp"')
-parser.add_argument('--statefull', dest='cache', action="store_true",
-                    help='Enables cache/cookies (Default: Clear cache/cookies)')
-parser.add_argument('-update-threshold', dest='update_threshold', type=int, default=30,
-                    help='Period of days to skip rescanning a website (Default: 30 days).')
 parser.add_argument('--update-ublock', dest='update_ublock', action="store_true",
                     help='Updates uBlock pattern lists every time a new browser is launched (Default: no update)')
-parser.add_argument('--priority-scan', dest='priority', action="store_true",
-                    help='Activates priority scan. This ORM will only scan domains with the priority flag enabled')
 
 
 if __name__ == '__main__':
@@ -127,7 +125,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     cache = args.cache
     update_ublock = args.update_ublock
-    update_threshold = args.update_threshold
     threads = args.threads
     temp_folder = os.path.join(os.path.abspath("."), args.tmp)
     v = args.verbose
@@ -169,17 +166,10 @@ if __name__ == '__main__':
             queue_lock.release()
             if qsize < (2 * threads):
                 logger.debug("[Main process] Getting work")
-                now = datetime.now(timezone.utc)
-                td = timedelta(-1 * update_threshold)
-                period = now + td
                 rq = 'SELECT id FROM domain'
-                if args.priority:
-                    rq += ' WHERE priority = 1'
-                else:
-                    rq += ' WHERE priority = 0 AND update_timestamp < "%s"' % (period.strftime('%Y-%m-%d %H:%M:%S'))
                 rq += ' AND id NOT IN (%s)' % ','.join(pending)
                 rq += ' AND id > %s' % last_id
-                rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (2 * threads)
+                rq += ' ORDER BY id ASC LIMIT %d ' % (2 * threads)
                 pending = ["0"]
                 database = Db()
                 results = database.custom(rq)
@@ -189,12 +179,6 @@ if __name__ == '__main__':
                     logger.debug("[Main process] Enqueuing work")
                     queue_lock.acquire()
                     for result in results:
-                        if args.priority:
-                            domain = Connector(database, "domain")
-                            domain.load(int(result["id"]))
-                            domain.values["priority"] = 0
-                            domain.values.pop("update_timestamp")
-                            domain.save()
                         work_queue.put(result["id"])
                         pending.append(str(result["id"]))
                         last_id = int(result["id"])

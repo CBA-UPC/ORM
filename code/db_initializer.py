@@ -42,6 +42,16 @@ def init_plugins():
     plugin.values["enabled"] = 1
     plugin.values["background"] = "moz-extension://UUID/background.html"
     plugin.save()
+    plugin.load(hash_string('Sustitutor'))
+    plugin.values["name"] = "Sustitutor"
+    plugin.values["path"] = "../assets/plugin/sustitutor/sustitutor_0.1.4.xpi"
+    plugin.values["identifier"] = "sustitutor@upc.edu"
+    plugin.values["custom"] = 0
+    plugin.values["url"] = ""
+    plugin.values["xpath_to_click"] = ""
+    plugin.values["enabled"] = 1
+    plugin.values["background"] = ""
+    plugin.save()
 
 
 def init_types():
