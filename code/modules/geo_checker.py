@@ -48,11 +48,13 @@ def check_geo(db, url, geoloc):
     """ Inserts the URL data into the database and returns the URL Connector. """
 
     loc = Connector(db, "location")
-    loc.load(url.values["id"])
+    if not loc.load(url.values["id"]):
+        loc.values["id"] = url.values["id"]
     location = extract_location(url.values["remote_IP_address"], geoloc)
     for key in location.keys():
         loc.values[key] = location[key]
     loc.save()
+
 
 
 parser = argparse.ArgumentParser(description='Geolocation checker')
