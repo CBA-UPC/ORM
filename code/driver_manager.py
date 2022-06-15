@@ -147,7 +147,6 @@ def reset_browser(driver, process, ublock, plugin, cache, update_ublock):
 def visit_site(db, process, driver, domain, ublock, plugin, temp_folder, cache, update_ublock, geo_db):
     """ Loads the website and extract its information. """
 
-    print("Domain %s (proc: %d)" % (domain.values["name"], process))
     try:
         blocker_tab_handle = driver.current_window_handle
     except Exception as e:
@@ -196,6 +195,10 @@ def visit_site(db, process, driver, domain, ublock, plugin, temp_folder, cache, 
         return driver, FAILED, NO_REPEAT
     # Wait some time inside the website
     time.sleep(10)
+    ss_folder = os.path.join(temp_folder, "screenshot")
+    os.makedirs(ss_folder, exist_ok=True)
+    ss = os.path.join(temp_folder, "screenshot", str(domain.values["id"]) + "_" + str(plugin.values["id"]) + ".png")
+    driver.save_screenshot(ss)
     try:
         # Close possible alerts
         finished = False
@@ -205,10 +208,13 @@ def visit_site(db, process, driver, domain, ublock, plugin, temp_folder, cache, 
                 alert.dismiss()
             except:
                 finished = True
+        # Take a screenshot
+        # Clean cookies if needed
         if not cache:
             driver.delete_all_cookies()
         driver.close()
     except WebDriverException as e:
+        os.remove(ss)
         logger.warning("WebDriverException (3) on %s / Error: %s (proc. %d)" % (domain.values["name"], str(e), process))
         driver = reset_browser(driver, process, ublock, plugin, cache, update_ublock)
         return driver, FAILED, REPEAT
@@ -218,6 +224,7 @@ def visit_site(db, process, driver, domain, ublock, plugin, temp_folder, cache, 
         driver.switch_to.window(blocker_tab_handle)
     except Exception as e:
         logger.error("Error accessing uBlock tab: %s (proc. %d)" % (str(e), process))
+        os.remove(ss)
         driver = reset_browser(driver, process, ublock, plugin, cache, update_ublock)
         return driver, FAILED, REPEAT
     try:
@@ -227,18 +234,17 @@ def visit_site(db, process, driver, domain, ublock, plugin, temp_folder, cache, 
             web_list[key] = storage[key]
     except NoSuchWindowException as e:
         logger.error("(proc. %d) Error accessing the session storage: %s" % (process, str(e)))
+        os.remove(ss)
         driver = reset_browser(driver, process, ublock, plugin, cache, update_ublock)
         return driver, FAILED, REPEAT
     else:
-        ss_folder = os.path.join(temp_folder, "screenshot")
-        os.makedirs(ss_folder, exist_ok=True)
-        driver.save_screenshot(os.path.join(ss_folder, str(domain.values["id"]) + "_" + str(plugin.values["id"]) + ".png"))
         # Insert data and clear storage before opening the next website
         manage_requests(db, process, domain, web_list, plugin, temp_folder, geo_db)
         try:
             storage.clear()
         except WebDriverException as e:
             logger.error("(proc. %d) Error clearing session storage: %s" % (process, str(e)))
+            os.remove(ss)
             driver = reset_browser(driver, process, ublock, plugin, cache, update_ublock)
             return driver, FAILED, NO_REPEAT
     domain.values["update_timestamp"] = utc_now()
