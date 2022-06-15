@@ -166,7 +166,7 @@ if __name__ == '__main__':
             if qsize < (2 * threads):
                 logger.debug("[Main process] Getting work")
                 rq = 'SELECT id FROM domain'
-                rq += ' AND id NOT IN (%s)' % ','.join(pending)
+                rq += ' WHERE id NOT IN (%s)' % ','.join(pending)
                 rq += ' AND id > %s' % last_id
                 rq += ' ORDER BY id ASC LIMIT %d ' % (2 * threads)
                 pending = ["0"]
