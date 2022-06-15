@@ -230,11 +230,11 @@ def visit_site(db, process, driver, domain, ublock, plugin, temp_folder, cache, 
         driver = reset_browser(driver, process, ublock, plugin, cache, update_ublock)
         return driver, FAILED, REPEAT
     else:
-        # Insert data and clear storage before opening the next website
-        manage_requests(db, process, domain, web_list, plugin, temp_folder, geo_db)
         ss_folder = os.path.join(temp_folder, "screenshot")
         os.makedirs(ss_folder, exist_ok=True)
         driver.save_screenshot(os.path.join(ss_folder, str(domain.values["id"]) + "_" + str(plugin.values["id"]) + ".png"))
+        # Insert data and clear storage before opening the next website
+        manage_requests(db, process, domain, web_list, plugin, temp_folder, geo_db)
         try:
             storage.clear()
         except WebDriverException as e:

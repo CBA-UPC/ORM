@@ -33,6 +33,7 @@ from driver_manager import build_driver, visit_site
 
 # Third-party modules
 from geoip2 import database as geolocation
+from pyvirtualdisplay import Display
 from setproctitle import setproctitle
 
 import config
@@ -131,6 +132,9 @@ if __name__ == '__main__':
     if verbose[str(v)]:
         logger.setLevel(verbose[str(v)])
 
+    display = Display(visible=False, size=(1920, 1080))
+    display.start()
+
     # If thread parameter is auto get the (total-1) or the available CPU's, whichever is smaller
     logger.info("Calculating processes...")
     if not threads:
@@ -158,7 +162,8 @@ if __name__ == '__main__':
 
         pending = ["0"]
         last_id = 0
-        while True:
+        finished = False
+        while not finished:
             # Insert new work into queue if needed.
             queue_lock.acquire()
             qsize = work_queue.qsize()
@@ -182,5 +187,8 @@ if __name__ == '__main__':
                         pending.append(str(result["id"]))
                         last_id = int(result["id"])
                     queue_lock.release()
+                else:
+                    finished = True
                 database.close()
             time.sleep(1)
+    display.stop()
