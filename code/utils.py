@@ -1,4 +1,4 @@
-'''
+"""
  *
  * Copyright (C) 2020 Universitat Politècnica de Catalunya.
  *
@@ -14,21 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
-'''
+"""
 
 # -*- coding: utf-8 -*-
 
 import socket
-from datetime import datetime, timezone
+import ssl
+from datetime import datetime, timezone, timedelta
+from hashlib import sha256
 from urllib.parse import urlparse
-import config
 
+import requests
 import tldextract
 from geoip2 import database
 from geoip2.errors import AddressNotFoundError
 
-import requests
-from hashlib import sha256
+import config
 
 try:
     import tlsh
@@ -43,7 +44,7 @@ except ImportError:
 def utc_now():
     """ Returns the current time in MySQL compatible format. """
 
-    ts = datetime.now(timezone.utc).timestamp()
+    ts = datetime.now(timezone(timedelta(hours=2), name="UTC+2")).timestamp()
     return datetime.utcfromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
 
 
@@ -149,3 +150,22 @@ def hash_string(s, hash_func=sha256):
 
     h = hash_func(s.encode())
     return h.hexdigest()
+
+
+def certificate_to_json(filepath):
+    certificate = dict(ssl._ssl._test_decode_cert(filepath))
+    for key in certificate.keys():
+        if key == "subject" or key == "issuer":
+            temp_dict = {}
+            for elem in certificate[key]:
+                for i in elem:
+                    temp_dict[i[0]] = i[1]
+            certificate[key] = temp_dict
+        elif key == 'OCSP' or key == 'caIssuers' or key == 'crlDistributionPoints':
+            certificate[key] = certificate[key][0]
+        elif key == "subjectAltName":
+            names = []
+            for elem in certificate[key]:
+                names.append(elem[1])
+            certificate[key] = names
+    return certificate

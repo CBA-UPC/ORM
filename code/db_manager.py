@@ -1,4 +1,4 @@
-'''
+"""
  *
  * Copyright (C) 2020 Universitat Politècnica de Catalunya.
  *
@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
-'''
+"""
 
 # -*- coding: utf-8 -*-
 
@@ -62,7 +62,7 @@ and then call the 'get_all' function to get all the domains. The results are
 returned as a list of Connectors representing the given data.
 
 This way of management simplifies a lot the database requests needed inside the
-code but clearly overgenerates requests. For the sake of speed and performance
+code but clearly over-generates requests. For the sake of speed and performance
 there are some other specific requests included in the Connector to get some
 extensive data that will slow the loading a lot using only the simple methods.
 
@@ -74,17 +74,15 @@ request for specific reasons.
 # Basic modules
 import MySQLdb
 import re
-import config
-import logging
 import logging.config
 
+import config
 from utils import hash_string
 
-logging.config.fileConfig('../logging.conf')
+logging.config.fileConfig('logging.conf')
 logger = logging.getLogger("DB_MANAGER")
 
-CROSS_TABLES = ["domain_subdomain", "domain_category", "domain_third_party", "domain_url",
-                "pattern_url", "resource_fingerprint"]
+CROSS_TABLES = ["domain_url", "resource_fingerprint", "resource_codeset", "resource_tracking", "url_tracking"]
 
 
 class Db(object):
@@ -94,12 +92,18 @@ class Db(object):
     make easier the data management.
     """
 
-    def __init__(self):
-        self.host = config.MYSQL_HOST
-        self.user = config.MYSQL_USER
-        self.password = config.MYSQL_PASSWORD
-        self.db = config.MYSQL_DB
-        self.conn = MySQLdb.connect(host=self.host, user=self.user, passwd=self.password, db=self.db,
+    def __init__(self,
+                 host=config.MYSQL_HOST,
+                 port=config.MYSQL_PORT,
+                 user=config.MYSQL_USER,
+                 password=config.MYSQL_PASSWORD,
+                 db=config.MYSQL_DB):
+        self.host = host
+        self.port = port
+        self.user = user
+        self.password = password
+        self.db = db
+        self.conn = MySQLdb.connect(host=self.host, port=self.port, user=self.user, passwd=self.password, db=self.db,
                                     use_unicode=True, charset='utf8mb4')
 
     def close(self):
@@ -107,14 +111,17 @@ class Db(object):
 
         self.conn.close()
 
-    def initialize(self, sites, start, timestamp):
-        """ initializes the database with the Alexa's list domain information. """
+    def initialize(self, sites, timestamp):
+        """ initializes the database with the Tranco's list domain information. """
 
-        for i, domain in enumerate(sites, start + 1):
+        printed = 0
+        for domain in sites.keys():
             # domain = extract_domain(domain)
-            print(str(i) + ": " + domain)
+            printed += 1
+            print(str(printed) + ": " + sites[domain]["name"])
             hash_key = hash_string(domain)
-            element = {"hash": hash_key, "name": domain, "rank": i, "insert_date": timestamp}
+            element = {"hash": hash_key, "name": domain, "tranco_rank": sites[domain]["tranco_rank"],
+                       "insert_date": timestamp}
             element_id = self.custom(query="SELECT id FROM domain WHERE domain.hash = %s", values=[hash_key])
             if not element_id:
                 self.insert("domain", element)
@@ -245,6 +252,22 @@ class Db(object):
                 logger.debug(request % tuple(values))
             cursor.execute(request, tuple(values))
         except MySQLdb.Error as error:
+            deadlock = 0
+            if re.search('Deadlock', str(error)):
+                deadlock = 1
+            while deadlock:
+                try:
+                    cursor.execute(request % tuple(values))
+                except MySQLdb.Error as e:
+                    if not re.search('Deadlock', str(e)):
+                        deadlock = 0
+                        error = e
+                else:
+                    self.conn.commit()
+                    if log:
+                        logger.debug("REQUEST OK.\n-----------------")
+                    cursor.close()
+                    return -1
             logger.error(request % tuple(values))
             logger.error("SQL ERROR: " + str(error) + "\n-----------------")
             cursor.close()
@@ -339,7 +362,7 @@ class Db(object):
         except MySQLdb.Error as error:
             logger.error("SQL ERROR: " + str(error) + "\n-----------------")
         else:
-            self.conn.commit()
+            #self.conn.commit()
             for row in cursor.fetchall():
                 result = {}
                 for key in row.keys():
@@ -572,8 +595,6 @@ class Connector(object):
         requests = ["DISTINCT id"]
         tables = []
         conditions = [self.table + "_id", element1.table + "_id", element2.table + "_id"]
-        if "resource_id" in args.keys():
-            conditions.append("resource_id")
         orders = ["id"]
         values = [self.values["id"], element1.values["id"], element2.values["id"]]
         if "resource_id" in args.keys():
