@@ -2,3 +2,4 @@ code/venv
 code/__pycache__
 code/log
 code/tmp
+code/config.py
