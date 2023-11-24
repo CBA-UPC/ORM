@@ -641,7 +641,10 @@ def get_mouse_fingerprinting(url):
         if tr.values["id"] == tracking.values["id"]:
             return url_tracking, 1
 
+    # Return here as the code above fails and hangs the browser
     return url_tracking, 0
+
+    # TODO: Replace above bad functioning code with new alternative
     # Otherwise extract file and compute
     resource_tracking = 0
     code = zlib.decompress(resource.values["file"])

@@ -21,10 +21,28 @@
 import argparse
 import os
 from datetime import datetime
+import requests
+import json
 
 import config
 from db_manager import Db, Connector
 from utils import hash_string
+
+
+def get_latest_list(size=1000000):
+    # Uses Tranco API to get the latest list-ID and downloads the list with the defined size.
+    # Formats the data and returns it as a python list.
+    
+    latest_list = requests.get("https://tranco-list.eu/api/lists/date/latest").text
+    list_id = json.loads(latest_list)["list_id"]
+    indexed_list = requests.get(f"https://tranco-list.eu/download/{list_id}/{size}").text
+    web_list = []
+    for webpage in indexed_list.split('\n'):
+        if webpage != '':
+            aux = webpage.split(',')[1].replace('\r','')
+            web_list.append(aux)
+
+    return web_list
 
 
 def init_plugins():
@@ -47,406 +65,57 @@ def init_plugins():
 def init_types():
     """ Initializes the default types """
 
-    mime_type = Connector(database, "mime_type")
-    mime_type.load(hash_string("text/html"))
-    mime_type.values["name"] = "text/html"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "frame"
-    mime_type.save()
+    values = [
+        ["text/html", "text/javascript", "application/javascript", 
+         "application/ecmascript", "application/x-javascript", "application/x-ecmascript", 
+         "text/ecmascript", "text/javascript1.0", "text/javascript1.1", 
+         "text/javascript1.2", "text/javascript1.3", "text/javascript1.4", 
+         "text/javascript1.5", "text/jscript", "text/livescript", 
+         "text/x-javascript", "text/x-ecmascript", "Manifest",
+         "text/plain", "text/css", "image/apng", "image/avif", "image/gif", "image/jpeg",
+         "image/png", "image/svg+xml", "image/webp", "audio/3gpp", "audio/3gpp2", "audio/3gp2",
+         "audio/aac", "audio/mpeg", "video/mpeg", "audio/flac", "audo/x-flac", "audio/mp4",
+         "video/mp4", "audio/ogg", "video/ogg", "video/quicktime", "audio/wave", "audio/wav",
+         "audio/x-wav", "audio/x-pn-wav", "audio/webm", "video/webm", "unknown"],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        ["frame", "script", "script", "script", "script", "script", 
+         "script", "script", "script", "script", "script", "script", 
+         "script", "script", "script", "script", "script", "other", 
+         "text", "stylesheet", "image", "image", "image", "image",
+         "image", "image", "image", "media", "media", "media", 
+         "media", "media", "media", "media", "media", "media", 
+         "media", "media", "media", "media", "media", "media", 
+         "media", "media", "media", "media", "unknown"]
+    ]
 
-    mime_type.load(hash_string("text/javascript"))
-    mime_type.values["name"] = "text/javascript"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("application/javascript"))
-    mime_type.values["name"] = "application/javascript"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("application/ecmascript"))
-    mime_type.values["name"] = "application/ecmascript"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("application/x-javascript"))
-    mime_type.values["name"] = "application/x-javascript"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("application/x-ecmascript"))
-    mime_type.values["name"] = "application/x-ecmascript"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("text/ecmascript"))
-    mime_type.values["name"] = "text/ecmascript"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("text/javascript1.0"))
-    mime_type.values["name"] = "text/javascript1.0"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("text/javascript1.1"))
-    mime_type.values["name"] = "text/javascript1.1"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("text/javascript1.2"))
-    mime_type.values["name"] = "text/javascript1.2"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("text/javascript1.3"))
-    mime_type.values["name"] = "text/javascript1.3"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("text/javascript1.4"))
-    mime_type.values["name"] = "text/javascript1.4"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("text/javascript1.5"))
-    mime_type.values["name"] = "text/javascript1.5"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("text/jscript"))
-    mime_type.values["name"] = "text/jscript"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("text/livescript"))
-    mime_type.values["name"] = "text/livescript"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("text/x-javascript"))
-    mime_type.values["name"] = "text/x-javascript"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("text/x-ecmascript"))
-    mime_type.values["name"] = "text/x-ecmascript"
-    mime_type.values["download"] = 1
-    mime_type.values["beautify"] = 1
-    mime_type.values["content_type"] = "script"
-    mime_type.save()
-
-    mime_type.load(hash_string("Manifest"))
-    mime_type.values["name"] = "Manifest"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "other"
-    mime_type.save()
-
-    mime_type.load(hash_string("text/plain"))
-    mime_type.values["name"] = "text/plain"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "text"
-    mime_type.save()
-
-    mime_type.load(hash_string("text/css"))
-    mime_type.values["name"] = "text/css"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "stylesheet"
-    mime_type.save()
-
-    mime_type.load(hash_string("image/apng"))
-    mime_type.values["name"] = "image/apng"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "image"
-    mime_type.save()
-
-    mime_type.load(hash_string("image/avif"))
-    mime_type.values["name"] = "image/avif"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "image"
-    mime_type.save()
-
-    mime_type.load(hash_string("image/gif"))
-    mime_type.values["name"] = "image/gif"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "image"
-    mime_type.save()
-
-    mime_type.load(hash_string("image/jpeg"))
-    mime_type.values["name"] = "image/jpeg"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "image"
-    mime_type.save()
-
-    mime_type.load(hash_string("image/png"))
-    mime_type.values["name"] = "image/png"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "image"
-    mime_type.save()
-
-    mime_type.load(hash_string("image/svg+xml"))
-    mime_type.values["name"] = "image/svg+xml"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "image"
-    mime_type.save()
-
-    mime_type.load(hash_string("image/webp"))
-    mime_type.values["name"] = "image/webp"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "image"
-    mime_type.save()
-
-    mime_type.load(hash_string("audio/3gpp"))
-    mime_type.values["name"] = "audio/3gpp"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("audio/3gpp2"))
-    mime_type.values["name"] = "audio/3gpp2"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("audio/3gp2"))
-    mime_type.values["name"] = "audio/3gp2"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("audio/aac"))
-    mime_type.values["name"] = "audio/aac"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("audio/mpeg"))
-    mime_type.values["name"] = "audio/mpeg"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("video/mpeg"))
-    mime_type.values["name"] = "video/mpeg"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("audio/flac"))
-    mime_type.values["name"] = "audio/flac"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("audio/x-flac"))
-    mime_type.values["name"] = "audio/x-flac"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("audio/mp4"))
-    mime_type.values["name"] = "audio/mp4"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("video/mp4"))
-    mime_type.values["name"] = "video/mp4"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("audio/ogg"))
-    mime_type.values["name"] = "audio/ogg"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("video/ogg"))
-    mime_type.values["name"] = "video/ogg"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("video/quicktime"))
-    mime_type.values["name"] = "video/quicktime"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("audio/wave"))
-    mime_type.values["name"] = "audio/wave"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("audio/wav"))
-    mime_type.values["name"] = "audio/wav"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("audio/x-wav"))
-    mime_type.values["name"] = "audio/x-wav"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("audio/x-pn-wav"))
-    mime_type.values["name"] = "audio/x-pn-wav"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("audio/webm"))
-    mime_type.values["name"] = "audio/webm"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type.load(hash_string("video/webm"))
-    mime_type.values["name"] = "video/webm"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "media"
-    mime_type.save()
-
-    mime_type = Connector(database, "mime_type")
-    mime_type.load(hash_string("unknown"))
-    mime_type.values["name"] = "unknown"
-    mime_type.values["download"] = 0
-    mime_type.values["beautify"] = 0
-    mime_type.values["content_type"] = "unknown"
-    mime_type.save()
+    for i in range(len(values[0])):
+        mime_type = Connector(database, "mime_type")
+        mime_type.load(hash_string(values[0][i]))
+        mime_type.values["name"] = values[0][i]
+        mime_type.values["download"] = values[1][i]
+        mime_type.values["beautify"] = values[2][i]
+        mime_type.values["content_type"] = values[3][i]
+        mime_type.save()
 
 
 def init_tracking():
     """ Initializes the default types """
 
-    tracking = Connector(database, "tracking")
-    tracking.load(hash_string("Session cookies"))
-    tracking.values["name"] = "Session cookies"
-    tracking.values["intrusion_level"] = 1
-    tracking.save()
+    values = [
+        ["Session cookies", "Long-living cookies", "Very long-living cookies", "JavaScript cookies",
+         "Third-party cookies", "Tracking cookies", "Font fingerprinting", "Canvas fingerprinting (small)",
+         "Canvas fingerprinting (big)", "Mouse fingerprinting", "WebGL fingerprinting"],
+        [1,2,3,3,4,5,4,5,6,6,6]
+    ]
 
-    tracking = Connector(database, "tracking")
-    tracking.load(hash_string("Long-living cookies"))
-    tracking.values["name"] = "Long-living cookies"
-    tracking.values["intrusion_level"] = 2
-    tracking.save()
+    for i in range(len(values[0])):
+        tracking = Connector(database, "tracking")
+        tracking.load(hash_string(values[0][i]))
+        tracking.values["name"] = values[0][i]
+        tracking.values["intrusion_level"] = values[1][i]
+        tracking.save()
 
-    tracking = Connector(database, "tracking")
-    tracking.load(hash_string("Very long-living cookies"))
-    tracking.values["name"] = "Very long-living cookies"
-    tracking.values["intrusion_level"] = 3
-    tracking.save()
-
-    tracking = Connector(database, "tracking")
-    tracking.load(hash_string("JavaScript cookies"))
-    tracking.values["name"] = "JavaScript cookies"
-    tracking.values["intrusion_level"] = 3
-    tracking.save()
-
-    tracking = Connector(database, "tracking")
-    tracking.load(hash_string("Third-party cookies"))
-    tracking.values["name"] = "Third-party cookies"
-    tracking.values["intrusion_level"] = 4
-    tracking.save()
-
-    tracking = Connector(database, "tracking")
-    tracking.load(hash_string("Tracking cookies"))
-    tracking.values["name"] = "Tracking cookies"
-    tracking.values["intrusion_level"] = 5
-    tracking.save()
-
-    tracking = Connector(database, "tracking")
-    tracking.load(hash_string("Font fingerprinting"))
-    tracking.values["name"] = "Font fingerprinting"
-    tracking.values["intrusion_level"] = 4
-    tracking.save()
-
-    tracking = Connector(database, "tracking")
-    tracking.load(hash_string("Canvas fingerprinting (small)"))
-    tracking.values["name"] = "Canvas fingerprinting (small)"
-    tracking.values["intrusion_level"] = 5
-    tracking.save()
-
-    tracking = Connector(database, "tracking")
-    tracking.load(hash_string("Canvas fingerprinting (big)"))
-    tracking.values["name"] = "Canvas fingerprinting (big)"
-    tracking.values["intrusion_level"] = 6
-    tracking.save()
-
-    tracking = Connector(database, "tracking")
-    tracking.load(hash_string("Mouse fingerprinting"))
-    tracking.values["name"] = "Mouse fingerprinting"
-    tracking.values["intrusion_level"] = 6
-    tracking.save()
-
-    tracking = Connector(database, "tracking")
-    tracking.load(hash_string("WebGL fingerprinting"))
-    tracking.values["name"] = "WebGL fingerprinting"
-    tracking.values["intrusion_level"] = 6
-    tracking.save()
 
 def init_fonts():
     """ Initializes de font table """
@@ -471,9 +140,9 @@ def init_mouse_tracking_domains():
 
 
 parser = argparse.ArgumentParser(description='Initializes the ORM database')
-parser.add_argument('start', type=int, default=0, help='Start index (0 indexed)')
-parser.add_argument('end', type=int, help='End index (not included)', nargs='?')
-parser.add_argument('-f', dest='filename', type=str, default='../assets/tranco/tranco_W9359-1m.csv.zip',
+parser.add_argument('-start', dest='start', type=int, default=1, help='Start index (Default 1)')
+parser.add_argument('-end', dest='end', type=int, default=1000000, help='End index (Default: 1000000)', nargs='?')
+parser.add_argument('-f', dest='filename', type=str, default='',
                     help='File containing one domain per line or a Tranco List csv. Can be a zip or gz file')
 
 
@@ -483,16 +152,20 @@ if __name__ == '__main__':
     end = args.end
 
     # Initialize the database
-    modified = int(os.path.getmtime(args.filename))
-    timestamp = datetime.utcfromtimestamp(modified).strftime('%Y-%m-%d %H:%M:%S')
-    print("Reading domain csv files")
-    tranco_sites = config.load_csv(args.filename, 1)[slice(start - 1, end - 1, None)]
-    tranco_websites = len(tranco_sites)
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print("Reading domains")
+    if args.filename:
+        tranco_sites = config.load_csv(args.filename, 1)[slice(start - 1, end - 1, None)]
+        modified = int(os.path.getmtime(args.filename))
+        timestamp = datetime.utcfromtimestamp(modified).strftime('%Y-%m-%d %H:%M:%S')
+    else:
+        tranco_sites = get_latest_list(end)
+
     sites = {}
-    for i, domain in enumerate(tranco_sites, start):
+    for i, domain in enumerate(tranco_sites[start-1:end], start - 1):
         domain = domain.replace("\n\r", "").replace("\r", "").replace("\n", "")
-        sites[domain] = {"tranco_rank": i, "name": domain}
-    print("Initializing database")
+        sites[domain] = {"tranco_rank": i+1, "name": domain}
+    print("Initializing database: %d domains" % len(sites))
     database = Db()
     init_plugins()
     init_types()

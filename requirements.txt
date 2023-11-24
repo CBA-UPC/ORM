@@ -6,9 +6,10 @@ lxml>=4.5.0
 mysqlclient>=1.4.6
 pyrabin>=0.6
 requests>=2.23.0
-selenium>=3.141.0
+selenium==3.141.0
 tldextract>=2.2.2
 asn1crypto>=1.4.0
 esprima>=4.0.1
 python-dateutil>=2.8.1
 setproctitle>=1.2.2
+urllib3==1.26.6

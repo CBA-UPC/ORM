@@ -114,11 +114,9 @@ class Db(object):
     def initialize(self, sites, timestamp):
         """ initializes the database with the Tranco's list domain information. """
 
-        printed = 0
         for domain in sites.keys():
             # domain = extract_domain(domain)
-            printed += 1
-            print(str(printed) + ": " + sites[domain]["name"])
+            print(str(sites[domain]["tranco_rank"]) + ": " + sites[domain]["name"])
             hash_key = hash_string(domain)
             element = {"hash": hash_key, "name": domain, "tranco_rank": sites[domain]["tranco_rank"],
                        "insert_date": timestamp}

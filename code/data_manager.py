@@ -219,8 +219,10 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                                         "insert_date": t,
                                         "update_timestamp": t})
 
-        # Check tracking for the url and related resource
-        check_tracking(url, domain)
+        ## Automatically label tracking for the url and related resource
+        ## Temporarily disabled as it is used onyl for eprivo.eu but not for research purposes
+        ## Uncomment next line to enable it
+        #check_tracking(url, domain)
     domain.save()
 
 

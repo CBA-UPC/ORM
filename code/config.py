@@ -11,6 +11,11 @@ FONT_FILE_PATH = join(PROJECT_DIR, '../assets/fonts/fonts.txt')
 GEOCITY_FILE_PATH = join(PROJECT_DIR, '../assets/geolocation/GeoLite2-City.mmdb')
 
 
+MYSQL_HOST = 'venus.cba.upc.edu'
+MYSQL_PORT = 3306
+MYSQL_DB = 'ORM'
+MYSQL_USER = 'script'
+MYSQL_PASSWORD = 'nonrelatedpassword'
 #MYSQL_HOST = 'XXXdatabaseXXX'
 #MYSQL_PORT = 3306
 #MYSQL_DB = 'ORM'

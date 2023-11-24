@@ -23,6 +23,7 @@ import os
 import re
 import time
 import logging.config
+import zlib
 
 # 3rd party modules
 from selenium import webdriver
@@ -176,6 +177,17 @@ def visit_site(db, process, driver, domain, plugin, temp_folder, cache, update_u
         return driver, FAILED, NO_REPEAT
     # Wait some time inside the website
     time.sleep(10)
+    os.makedirs(os.path.join(os.path.abspath("."), temp_folder), exist_ok=True)
+    filename = os.path.join(temp_folder, domain.values["name"] + 'ss.png')
+    driver.save_screenshot(filename)
+    size = os.stat(filename).st_size
+    compressed_code = None
+    if size > 0:
+        # Compress the screenshot to save it into the database when needed
+        with open(filename, 'rb') as f:
+            blob_value = f.read()
+            compressed_code = zlib.compress(blob_value)
+    os.remove(filename)
     try:
         # Close possible alerts
         finished = False
@@ -220,5 +232,7 @@ def visit_site(db, process, driver, domain, plugin, temp_folder, cache, update_u
             return driver, FAILED, NO_REPEAT
     domain.values["update_timestamp"] = utc_now()
     domain.values["priority"] = 0
+    if compressed_code:
+        domain.values["screenshot"] = compressed_code;
     domain.save()
     return driver, COMPLETED, NO_REPEAT
