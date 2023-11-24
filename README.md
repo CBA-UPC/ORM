@@ -5,7 +5,8 @@ We found that only one instance of the system can scrape information from thousa
 
 ## Setup
 ### Requirements
-We strongly recommend the use of at least Python 3.7, since lower versions may not support the required modules.
+We strongly recommend the use of at least Python 3.7, since lower versions may not support the required modules. The framework was developed under Ubuntu 18.04 LTS and there may be some incompatibilities with newer versions of some of the libraries and modules, especially with Selenium. In the [assets/firefox](assets/firefox) directory there is also included the firefox and geckodriver versions used during the development for compatibility reasons. Newer versions may introduce changes that render the framework useless. We are currently working on updating the code to support newer versions of all the tools used.
+
 The following packages are required:
 * wheel>=0.36.2
 * beautifulsoup4>=4.8.2
