@@ -35,7 +35,7 @@ Lastly, we will make use of [Mysql Workbench](https://www.mysql.com/products/wor
 ### Installation
 1) Load the database structure included inside [assets/database](assets/database) with MySQL Workbench, then synchronize the model with the server where the data is going to be stored. The default database name is ORM. To force script compatibility with MySQL 5.8.7, specify "5.8.7" as the "Target MySQL Version" inside "Model Options" of MySQL Workbench.
 
-2) Modify the DB connection information accordingly inside [config.py](code/config.py).
+2) rename the [config_example.py](code/config_example.py) to config.py and modify the DB connection information inside according to your database parameters.
 
 3) Create a "log" folder inside the "code" folder.
 
