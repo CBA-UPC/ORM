@@ -111,6 +111,8 @@ parser.add_argument('-v', dest='verbose', type=int, default=3,
                     help='Verbose: 0=CRITICAL; 1=ERROR; 2=WARNING; 3=INFO; 4=DEBUG (Default: WARNING)')
 parser.add_argument('-d', dest='tmp', type=str, default='tmp',
                     help='Temporary folder (Default: "./tmp"')
+parser.add_argument('--start', dest='start', type=int, default=0,
+                    help='Domain id start index (Default: 0). Used to skip some domains and start by a especific domain')
 parser.add_argument('--statefull', dest='cache', action="store_true",
                     help='Enables cache/cookies (Default: Clear cache/cookies)')
 parser.add_argument('-update-threshold', dest='update_threshold', type=int, default=30,
@@ -165,7 +167,7 @@ if __name__ == '__main__':
         p = pool.map_async(main, [i for i in range(int(threads))])
 
         pending = ["0"]
-        last_id = 0
+        last_id = args.start
         while True:
             # Insert new work into queue if needed.
             queue_lock.acquire()
