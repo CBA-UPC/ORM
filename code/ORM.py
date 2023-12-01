@@ -93,13 +93,14 @@ def main(process):
                                                                                               driver[1].values['id'])
                 db.custom(request)
                 # Launch the crawl
+                url = 'http://' + domain.values["name"] +'/'
                 extra_tries = 3
                 completed = False
                 repeat = True
                 while extra_tries > 0 and not completed and repeat:
                     extra_tries -= 1
-                    driver[0], completed, repeat = visit_site(db, process, driver[0], domain,
-                                                              driver[1], temp_folder, cache, update_ublock, geo_db)
+                    driver[0], completed, repeat, link_dict, parsed_links = visit_site(db, process, driver[0], domain, url,
+                                                              driver[1], temp_folder, cache, update_ublock, geo_db, 0, max_deep, {})
                 # TODO: Try to remove websites when unable to get info??
                 #  -> if a connection problem happens all the websites will be removed...
 
@@ -111,6 +112,8 @@ parser.add_argument('-v', dest='verbose', type=int, default=3,
                     help='Verbose: 0=CRITICAL; 1=ERROR; 2=WARNING; 3=INFO; 4=DEBUG (Default: WARNING)')
 parser.add_argument('-d', dest='tmp', type=str, default='tmp',
                     help='Temporary folder (Default: "./tmp"')
+parser.add_argument('--deepness', dest='max_deep', type=int, default=4,
+                    help='Maximum recursive exploration of website internal links (Default: 0; scan only the homepages)')
 parser.add_argument('--start', dest='start', type=int, default=0,
                     help='Domain id start index (Default: 0). Used to skip some domains and start by a especific domain')
 parser.add_argument('--statefull', dest='cache', action="store_true",
@@ -132,6 +135,7 @@ if __name__ == '__main__':
     update_ublock = args.update_ublock
     update_threshold = args.update_threshold
     threads = args.threads
+    max_deep = args.max_deep
     temp_folder = os.path.join(os.path.abspath("."), args.tmp)
     v = args.verbose
     os.makedirs(os.path.join(os.path.abspath("."), "log"), exist_ok=True)

@@ -25,15 +25,17 @@ import logging
 import logging.config
 import zlib
 import time
+import re
 
 # 3rd party modules
 import requests
+from bs4 import BeautifulSoup
 from asn1crypto import pem
 
 # Own modules
 from db_manager import Db, Connector
 from tracking_manager import check_tracking
-from utils import download_file, hash_file, lsh_file, hash_string, utc_now
+from utils import download_file, hash_file, lsh_file, hash_string, utc_now, extract_domain
 from utils import certificate_to_json, extract_location, clean_subdomain
 
 logging.config.fileConfig('logging.conf')
@@ -41,7 +43,7 @@ logging.config.fileConfig('logging.conf')
 logger = logging.getLogger("DATA_MANAGER")
 
 
-def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_db):
+def manage_requests(db, process, domain, request_list, current_deepness, plugin, temp_folder, geo_db):
     """ Inserts the URL data if non-existent and downloads resources if needed """
 
     t = utc_now()
@@ -106,20 +108,22 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                 url.values["blocked"] = 1
             if "from_cache" in elem.keys():
                 url.values["from_cache"] = elem["from_cache"]
-            if not url.values["from_cache"] and "server_ip" in elem.keys():
-                url.values["server_ip"] = elem["server_ip"]
-                location = extract_location(url.values["server_ip"], geo_db)
-                if location["is_EU"]:
-                    url.values["is_EU"] = 1
-                url.values["country_code"] = location["country_code"]
-            if "request_headers" in elem.keys():
-                url.values["request_headers"] = json.dumps(elem["request_headers"])
+                if not url.values["from_cache"] and "server_ip" in elem.keys():
+                    url.values["server_ip"] = elem["server_ip"]
+                    location = extract_location(url.values["server_ip"], geo_db)
+                    if location["is_EU"]:
+                        url.values["is_EU"] = 1
+                    url.values["country_code"] = location["country_code"]
+                if "request_headers" in elem.keys():
+                    url.values["request_headers"] = json.dumps(elem["request_headers"])
             content_type = Connector(db, "mime_type")
             if "response_headers" in elem.keys():
                 url.values["response_headers"] = json.dumps(elem["response_headers"])
                 if "content-type" in elem["response_headers"]:
                     if not content_type.load(hash_string(elem["response_headers"]["content-type"].split(";")[0])):
                         content_type.values["name"] = elem["response_headers"]["content-type"].split(";")[0]
+                        if re.search("text", content_type.values["name"]) or re.search("script", content_type.values["name"]):
+                            content_type.values["download"] = 1
                         if not content_type.save():
                             content_type.load(hash_string(elem["response_headers"]["content-type"].split(";")[0]))
                 else:
@@ -151,6 +155,13 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                 while not url.load(elem["hash"]) and seconds > 0:
                     seconds -= 1
                     time.sleep(1)
+            # If the URL pertains to an already known data collector link it in the database
+            collectors = Connector(db, "collector")
+            collectors = collectors.get_all()
+            name = clean_subdomain(url.values["url"])
+            for collector in collectors:
+                if collector.values["url1"] == name or (collector.values["url2"] and collector.values["url2"] == name):
+                    collector.add(url)
         else:
             # I URL has already been found update the timestamp
             url.values["update_timestamp"] = t
@@ -190,7 +201,15 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                         resource.values["size"] = size
                         # Compute the fuzzy hash
                         resource.values["fuzzy_hash"] = lsh_file(filename)
-                        os.remove(filename)
+                        try:
+                            with open(filename, 'r', encoding="utf-8") as f:
+                                code = f.read()
+                                if not re.search("outiqu", code) and re.search("utiq", code):
+                                    collector = Connector(db, "collector")
+                                    collector.load(hash_string("utiq"))
+                                    collector.add(url)
+                        except Exception as e:
+                            logger.error("(proc. %s) Decoding error: %s" % (process, str(e)))
                     else:
                         logger.error("(proc. %s) Error #1: Resource not correctly saved - %s" % (process, elem["url"]))
                 if not resource.save():
@@ -216,6 +235,7 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
             initiator_id = initiator_frame.values["id"]
         domain.add_double(url, plugin, {"third_party": elem["thirdParty"],
                                         "initiator_frame": initiator_id,
+                                        "deep_level": current_deepness,
                                         "insert_date": t,
                                         "update_timestamp": t})
 
@@ -225,6 +245,62 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
         #check_tracking(url, domain)
     domain.save()
 
+
+def insert_link(db, parent_url, link_url):
+    """ Inserts a new link inside the parent URL """
+
+    url1 = Connector(db, "url")
+    url1.load(hash_string(parent_url))
+    url2 = Connector(db, "url")
+    url2.load(hash_string(link_url))
+    if not url1.values["id"] or not url2.values["id"]:
+        return False
+    link_id = db.custom("SELECT id FROM link WHERE url_id1 = %d AND url_id2 = %d" % (url1.values["id"], url2.values["id"]))
+    if not link_id:
+        link = Connector(db, "link")
+        link.values["url_id1"] = url1.values["id"]
+        link.values["url_id2"] = url2.values["id"]
+        link.save()
+    return True
+
+
+def parse_internal_links(db, url, webcode, link_dict):
+    """ Obtains a dictionary with the internal links on the webcode and for each one of them if it has to be scraped or not. """
+
+    # Insert main URL info
+    if url not in link_dict.keys():
+        link_dict[url] = {"linked_by": [], "links_to": [], "parsed": True}
+
+    soup = BeautifulSoup(webcode, 'lxml')
+    for hyperlink in soup.find_all('a'):
+        link = hyperlink.get('href')
+        if not link:
+            continue
+        
+        # We cut on \# characters to avoid also multiple urls with anchors for the same website
+        link = link.split("#")[0]
+        
+        # If it is a malformed link try to fix it by adding the hosting domain
+        if link and link[0] == '/':
+            link = url.split(extract_domain(url))[0] + extract_domain(url) + link
+        elif link and link[0] != 'h':
+            link = url.split(extract_domain(url))[0] + extract_domain(url) + '/' + link
+        
+
+        # Insert link info
+        if link not in link_dict.keys():
+            link_dict[link] = {"linked_by": [url], "links_to": [], "parsed": False}
+        else:
+            link_dict[link]["linked_by"].append(url)
+        link_dict[url]["links_to"].append(link)
+
+        # Skip parsing links already present in the db
+        link_url = Connector(db, "url")
+        if  link_url.load(link):
+            link_dict[link]["parsed"] = True
+
+    return link_dict
+        
 
 def download_url(process, url, filename):
     """ Downloads the given url into the given filename. """

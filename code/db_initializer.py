@@ -77,11 +77,11 @@ def init_types():
          "audio/aac", "audio/mpeg", "video/mpeg", "audio/flac", "audo/x-flac", "audio/mp4",
          "video/mp4", "audio/ogg", "video/ogg", "video/quicktime", "audio/wave", "audio/wav",
          "audio/x-wav", "audio/x-pn-wav", "audio/webm", "video/webm", "unknown"],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         ["frame", "script", "script", "script", "script", "script", 
          "script", "script", "script", "script", "script", "script", 
-         "script", "script", "script", "script", "script", "other", 
+         "script", "script", "script", "script", "script", "manifest", 
          "text", "stylesheet", "image", "image", "image", "image",
          "image", "image", "image", "media", "media", "media", 
          "media", "media", "media", "media", "media", "media", 
@@ -129,6 +129,25 @@ def init_fonts():
         font.save()
 
 
+def init_collectors():
+    collectors = [["utiq", ["utiq.com", "utiq-aws.net"]],
+                  ["ClickTale", ["clicktale.com", "clicktale.net"]], 
+                  ["eTracker", ["etracker.com"]], 
+                  ["hostpoint", ["clickmap.ch", "hostpoint.ch"]],
+                  ["Crazyegg", ["crazyegg.com"]], 
+                  ["Hotjar", ["hotjar.com"]], 
+                  ["mouseflow", ["mouseflow.com"]], 
+                  ["didomi", ["didomi.io", "privacy-center.org"]]]
+    for c in collectors:
+        collector = Connector(database, "collector")
+        collector.load(hash_string(c[0]))
+        collector.values["name"] = c[0]
+        collector.values["url1"] = c[1][0]
+        if len(c[1]) > 1:
+            collector.values["url2"] = c[1][1]
+        collector.save()
+
+
 def init_mouse_tracking_domains():
     tracking_domains = ["clicktale.com", "clicktale.net", "etracker.com", "clickmap.ch",
                         "script.crazyegg.com", "tracking.crazyegg.com", "hotjar.com", "mouseflow.com"]
@@ -169,6 +188,7 @@ if __name__ == '__main__':
     database = Db()
     init_plugins()
     init_types()
+    init_collectors()
     init_tracking()
     init_fonts()
     init_mouse_tracking_domains()

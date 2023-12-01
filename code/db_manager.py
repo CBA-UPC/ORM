@@ -82,7 +82,8 @@ from utils import hash_string
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger("DB_MANAGER")
 
-CROSS_TABLES = ["domain_url", "resource_fingerprint", "resource_codeset", "resource_tracking", "url_tracking"]
+CROSS_TABLES = ["domain_url", "resource_fingerprint", "resource_codeset", "resource_tracking", "url_tracking", 
+                "url_collector", "collector_databroker"]
 
 
 class Db(object):
