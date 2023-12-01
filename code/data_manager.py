@@ -105,6 +105,8 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
                 if not host2.load(hash_string(lvl2_domain)):
                     if not host.save():
                         host.load(hash_string(lvl2_domain))
+                else:
+                    host.values["id"] = host2.values["id"]
             url.values["host_id"] = host.values["id"]
             if elem["blocked"]:
                 url.values["blocked"] = 1
