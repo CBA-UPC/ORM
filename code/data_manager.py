@@ -101,11 +101,10 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
             if not host.load(hash_string(lvl2_domain)):
                 host.values["name"] = lvl2_domain
                 host.values["update_timestamp"] = t
-                if not host.save():
-                    seconds = 30
-                    while not host.load(hash_string(lvl2_domain)) and seconds > 0:
-                        seconds -= 1
-                        time.sleep(1)
+                host2 = Connector(db, "host")
+                if not host2.load(hash_string(lvl2_domain)):
+                    if not host.save():
+                        host.load(hash_string(lvl2_domain))
             url.values["host_id"] = host.values["id"]
             if elem["blocked"]:
                 url.values["blocked"] = 1
