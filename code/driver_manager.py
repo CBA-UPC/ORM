@@ -274,7 +274,6 @@ def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache,
             internal_link = link_dict[link]
             # Skip already seen links
             if internal_link["parsed"]:
-                parsed_links += 1
                 continue
 
             # If it is an external resource from other domain we explore it,
