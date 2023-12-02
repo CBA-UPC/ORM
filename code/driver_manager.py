@@ -268,6 +268,9 @@ def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache,
     if current_deepness < max_deepness:
         # Collect internal links from website's own code
         link_dict = parse_internal_links(db, url, webcode, link_dict)
+        total_links = len(link_dict.keys())
+        if current_deepness > 0:
+            logger.info("(proc. %s): '%s' parsed links [%d/%d]" % (process, domain.values["name"], parsed_links, total_links))
 
         # Scrape internal links if needed
         for link in link_dict[url]["links_to"]:
@@ -293,10 +296,11 @@ def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache,
                                                        update_ublock, geo_db, deepness, max_deepness, link_dict, parsed_links)
             if extra_tries > 0:
                 insert_link(db, url, link)
+    else:
+        total_links = len(link_dict.keys())
+        if current_deepness > 0:
+            logger.info("(proc. %s): '%s' parsed links [%d/%d]" % (process, domain.values["name"], parsed_links, total_links))
 
-    total_links = len(link_dict.keys())
-    if current_deepness > 0:
-        logger.info("(proc. %s): '%s' parsed links [%d/%d]" % (process, domain.values["name"], parsed_links, total_links))
 
     # If this is one of the recursive calls do not save the domain info yet
     if current_deepness != 0:

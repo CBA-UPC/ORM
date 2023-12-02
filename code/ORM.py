@@ -142,8 +142,8 @@ if __name__ == '__main__':
     if verbose[str(v)]:
         logger.setLevel(verbose[str(v)])
 
-    #display = Display(visible=False, size=(1920, 1080))
-    #display.start()
+    display = Display(visible=False, size=(1920, 1080))
+    display.start()
 
     # If thread parameter is auto get the (total-1) or the available CPU's, whichever is smaller
     logger.info("Calculating processes...")
@@ -211,4 +211,4 @@ if __name__ == '__main__':
                     queue_lock.release()
                 database.close()
             time.sleep(1)
-    #display.stop()
+    display.stop()
