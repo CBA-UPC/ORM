@@ -91,6 +91,7 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
     # We sort them by request id and timestamp to link parent urls with child ones
     for elem in sorted(url_dict, key=lambda i: (int(i["requestId"]), int(i["timeStamp"]))):
         url = Connector(db, "url")
+        address = Connector(db, "address")
         # If not previously seen URL insert it
         if not url.load(hash_string(elem["url"])):
             url.values["url"] = elem["url"]
@@ -102,24 +103,6 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
             # If not in browser cache try to get address properties
             if "from_cache" in elem.keys():
                 url.values["from_cache"] = elem["from_cache"]
-                if not url.values["from_cache"] and "server_ip" in elem.keys():
-                    host_domain = clean_subdomain(elem["url"])
-                    host = Connector(db, "host")
-                    if not host.load(hash_string(host_domain)):
-                        host.values["name"] = host_domain
-                        host.values["update_timestamp"] = t
-                        if not host.save():
-                            host.load(hash_string(host_domain))
-                    address = Connector(db, "address")
-                    if not address.load(hash_string(elem["server_ip"])):
-                        address.values["address"] = elem["server_ip"]
-                        address.values["is_EU"] = 0
-                        location = extract_location(elem["server_ip"], geo_db)
-                        if location["is_EU"]:
-                            address.values["is_EU"] = 1
-                        address.values["country_code"] = location["country_code"]
-                        host.add(address)
-                        url.add(address)
                 if "request_headers" in elem.keys():
                     url.values["request_headers"] = json.dumps(elem["request_headers"])
             # Save headers in JSON format and try to find the mime type of the file
@@ -173,6 +156,26 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
             # I URL has already been found update the timestamp
             url.values["update_timestamp"] = t
             url.save()
+        if "server_ip" in elem.keys():
+            host_domain = clean_subdomain(elem["url"])
+            host = Connector(db, "host")
+            if not host.load(hash_string(host_domain)):
+                host.values["name"] = host_domain
+                host.values["update_timestamp"] = t
+                if not host.save():
+                    host.load(hash_string(host_domain))
+            if not address.load(hash_string(elem["server_ip"])):
+                address.values["address"] = elem["server_ip"]
+                address.values["is_EU"] = 0
+                location = extract_location(elem["server_ip"], geo_db)
+                if location["is_EU"]:
+                    address.values["is_EU"] = 1
+                address.values["country_code"] = location["country_code"]
+                if not address.save():
+                    address.load(hash_string(elem["server_ip"]))
+                host.add(address)
+                url.add(address)
+
         # Depending on the resource type download it if needed
         content_type = Connector(db, "mime_type")
         content_type.load(url.values["mime_type_id"])

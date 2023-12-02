@@ -457,6 +457,12 @@ class Connector(object):
                 return False
 
         return True
+    
+    def __bool__(self):
+        if "id" in self.values.keys() and self.values["id"]:
+            return True
+        else:
+            return False
 
     def load(self, value, args=None):
         """ Loads the element depending on the given value. """
