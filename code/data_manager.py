@@ -156,7 +156,6 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
             url.values["update_timestamp"] = t
             url.save()
         if "server_ip" in elem.keys():
-            print(elem["server_ip"])
             host_domain = clean_subdomain(elem["url"])
             host = Connector(db, "host")
             if not host.load(hash_string(host_domain)):
