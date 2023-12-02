@@ -489,7 +489,7 @@ class Connector(object):
             return 0
         if len(result) > 1:
             logger.warning("Loading " + self.table + " '" + str(value) + "': Too many query results")
-            return 0
+            #return 0
         self.values = result[0]
         return self.values["id"]
 
