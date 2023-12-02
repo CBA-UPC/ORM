@@ -26,8 +26,7 @@ import logging.config
 import zlib
 
 # 3rd party modules
-from bs4 import BeautifulSoup
-from seleniumwire import webdriver
+from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException
 from selenium.common.exceptions import NoSuchWindowException
 from selenium.webdriver.common.alert import Alert
@@ -180,28 +179,6 @@ def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache,
 
     # Wait some time inside the website
     time.sleep(10)
-
-    # Discard HTTP access errors (e.g. 403, 404)
-    for request in driver.requests:
-        if request.response:
-            if request.url == url and request.response.status_code >= 400:
-                driver.close()
-                # Get back to the ublock tab and clear the storage
-                try:
-                    driver.switch_to.window(blocker_tab_handle)
-                    storage = SessionStorage(driver)
-                    storage.clear()
-                except NoSuchWindowException as e:
-                    logger.error("(proc. %d) Error accessing the session storage: %s" % (process, str(e)))
-                    driver = reset_browser(driver, process, plugin, cache, update_ublock)
-                    return driver, FAILED, NO_REPEAT, link_dict, parsed_links
-                except WebDriverException as e:
-                    logger.error("(proc. %d) Error clearing session storage: %s" % (process, str(e)))
-                    driver = reset_browser(driver, process, plugin, cache, update_ublock)
-                except Exception as e:
-                    logger.error("Error accessing uBlock tab: %s (proc. %d)" % (str(e), process))
-                    driver = reset_browser(driver, process, plugin, cache, update_ublock)
-                return driver, FAILED, NO_REPEAT, link_dict, parsed_links
 
     # We collect again the URL after redirections
     url = driver.current_url

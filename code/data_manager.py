@@ -91,7 +91,6 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
     # We sort them by request id and timestamp to link parent urls with child ones
     for elem in sorted(url_dict, key=lambda i: (int(i["requestId"]), int(i["timeStamp"]))):
         url = Connector(db, "url")
-        address = Connector(db, "address")
         # If not previously seen URL insert it
         if not url.load(hash_string(elem["url"])):
             url.values["url"] = elem["url"]
@@ -157,6 +156,7 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
             url.values["update_timestamp"] = t
             url.save()
         if "server_ip" in elem.keys():
+            print(elem["server_ip"])
             host_domain = clean_subdomain(elem["url"])
             host = Connector(db, "host")
             if not host.load(hash_string(host_domain)):
@@ -164,6 +164,7 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
                 host.values["update_timestamp"] = t
                 if not host.save():
                     host.load(hash_string(host_domain))
+            address = Connector(db, "address")
             if not address.load(hash_string(elem["server_ip"])):
                 address.values["address"] = elem["server_ip"]
                 address.values["is_EU"] = 0
@@ -173,8 +174,8 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
                 address.values["country_code"] = location["country_code"]
                 if not address.save():
                     address.load(hash_string(elem["server_ip"]))
-                host.add(address)
-                url.add(address)
+            host.add(address)
+            url.add(address)
 
         # Depending on the resource type download it if needed
         content_type = Connector(db, "mime_type")
