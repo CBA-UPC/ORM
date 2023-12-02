@@ -291,6 +291,9 @@ def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache,
                 extra_tries -= 1
                 driver, completed, repeat, link_dict, parsed_links = visit_site(db, process, driver, domain, link, plugin, temp_folder, cache, 
                                                        update_ublock, geo_db, deepness, max_deepness, link_dict, parsed_links)
+            if extra_tries > 0:
+                insert_link(db, url, link)
+
     total_links = len(link_dict.keys())
     if current_deepness > 0:
         logger.info("(proc. %s): '%s' parsed links [%d/%d]" % (process, domain.values["name"], parsed_links, total_links))
@@ -299,11 +302,6 @@ def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache,
     if current_deepness != 0:
         return driver, COMPLETED, NO_REPEAT, link_dict, parsed_links
     
-    # Insert the link information found inside the database
-    for url in link_dict.keys():
-        for link in link_dict[url]["links_to"]:
-            insert_link(db, url, link)
-
     # Save the screenshot and update the db update timestamp
     domain.values["update_timestamp"] = utc_now()
     domain.values["priority"] = 0

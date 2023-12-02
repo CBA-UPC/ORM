@@ -96,30 +96,33 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
             url.values["url"] = elem["url"]
             url.values["method"] = elem["method"]
             url.values["type"] = elem["type"]
-            lvl2_domain = clean_subdomain(elem["url"])
-            host = Connector(db, "host")
-            if not host.load(hash_string(lvl2_domain)):
-                host.values["name"] = lvl2_domain
-                host.values["update_timestamp"] = t
-                host2 = Connector(db, "host")
-                if not host2.load(hash_string(lvl2_domain)):
-                    if not host.save():
-                        host.load(hash_string(lvl2_domain))
-                else:
-                    host.values["id"] = host2.values["id"]
-            url.values["host_id"] = host.values["id"]
+            url.values["host"] = clean_subdomain(elem["url"])
             if elem["blocked"]:
                 url.values["blocked"] = 1
+            # If not in browser cache try to get address properties
             if "from_cache" in elem.keys():
                 url.values["from_cache"] = elem["from_cache"]
                 if not url.values["from_cache"] and "server_ip" in elem.keys():
-                    url.values["server_ip"] = elem["server_ip"]
-                    location = extract_location(url.values["server_ip"], geo_db)
-                    if location["is_EU"]:
-                        url.values["is_EU"] = 1
-                    url.values["country_code"] = location["country_code"]
+                    host_domain = clean_subdomain(elem["url"])
+                    host = Connector(db, "host")
+                    if not host.load(hash_string(host_domain)):
+                        host.values["name"] = host_domain
+                        host.values["update_timestamp"] = t
+                        if not host.save():
+                            host.load(hash_string(host_domain))
+                    address = Connector(db, "address")
+                    if not address.load(hash_string(elem["server_ip"])):
+                        address.values["address"] = elem["server_ip"]
+                        address.values["is_EU"] = 0
+                        location = extract_location(elem["server_ip"], geo_db)
+                        if location["is_EU"]:
+                            address.values["is_EU"] = 1
+                        address.values["country_code"] = location["country_code"]
+                        host.add(address)
+                        url.add(address)
                 if "request_headers" in elem.keys():
                     url.values["request_headers"] = json.dumps(elem["request_headers"])
+            # Save headers in JSON format and try to find the mime type of the file
             content_type = Connector(db, "mime_type")
             if "response_headers" in elem.keys():
                 url.values["response_headers"] = json.dumps(elem["response_headers"])
@@ -154,7 +157,7 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
             url.values["insert_date"] = t
             url.values["update_timestamp"] = t
             if not url.save():
-                # Wait until the other thread saves the URL inside the database (or 10s max)
+                # Wait until the other thread saves the URL inside the database (or 30s max)
                 seconds = 30
                 while not url.load(elem["hash"]) and seconds > 0:
                     seconds -= 1
