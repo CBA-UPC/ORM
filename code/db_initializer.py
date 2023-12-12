@@ -140,14 +140,22 @@ def init_collectors(fname):
     category.save()
     with open(os.path.join(os.path.abspath("."), fname), "r") as f:
         for line in f.readlines():
-            name = line.split(",")[0]
-            cat = line.split(",")[1]
+            if len(line.split(", ")) == 1 and len(line.split(",")) > 1:
+                name = line.split(",")[0]
+                cat = line.split(",")[1]
+            elif len(line.split(", ")) > 1 and len(line.split(",")) > 2:
+                name = line.split(", ")[0] + "," + line.split(",")[1]
+                cat = line.split(",")[2]
+            name = name.replace("\r\n", "").replace("\n", "")
+            cat = cat.replace("\r\n", "").replace("\n", "")
             collector.load(hash_string(name))
             collector.values["name"] = name
             collector.save()
-            category.load(hash_string(cat))
-            category.values["name"] = cat
-            category.save()
+            for c in cat.split(";"):
+                category.load(hash_string(c))
+                category.values["name"] = c
+                category.save()
+                collector.add(category)
 
 
 def init_mouse_tracking_domains():
