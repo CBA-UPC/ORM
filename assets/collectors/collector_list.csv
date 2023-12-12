@@ -516,7 +516,7 @@ BaronsMedia,Ad Agency,
 Basis,Unknown,
 Basis Global Technologies, Inc.,Demand Side Platform (DSP),
 Baynote Inc.,Service Provider,
-Bazaarvoice,Inc.,Customization;analytics-static.ugc.bazaarvoice.com;api.bazaarvoice.com;apps.bazaarvoice.com;contentorigin.bazaarvoice.com;curalate.com;display-stg.ugc.bazaarvoice.com;display.ugc.bazaarvoice.com;edge.curalate.com;network-a.bazaarvoice.com;network.bazaarvoice.com;network-eu-a.bazaarvoice.com;network-eu.bazaarvoice.com;network-eu-stg.bazaarvoice.com;network-stg-a.bazaarvoice.com;network-stg.bazaarvoice.com;photos-eu.bazaarvoice.com;photos-us.bazaarvoice.com;rh.nexus.bazaarvoice.com;stg.api.bazaarvoice.com
+Bazaarvoice, Inc.,Customization;Attribution / Analytics,analytics-static.ugc.bazaarvoice.com;api.bazaarvoice.com;apps.bazaarvoice.com;contentorigin.bazaarvoice.com;curalate.com;display-stg.ugc.bazaarvoice.com;display.ugc.bazaarvoice.com;edge.curalate.com;network-a.bazaarvoice.com;network.bazaarvoice.com;network-eu-a.bazaarvoice.com;network-eu.bazaarvoice.com;network-eu-stg.bazaarvoice.com;network-stg-a.bazaarvoice.com;network-stg.bazaarvoice.com;photos-eu.bazaarvoice.com;photos-us.bazaarvoice.com;rh.nexus.bazaarvoice.com;stg.api.bazaarvoice.com
 Bazaarvoice, Inc.,Service Provider,
 BBC News,Ad Network,
 BCOVERY SAS,Unknown,
@@ -788,8 +788,8 @@ Colossus,Ad Network,
 Colossus Media, LLC.,Data Management Platform (DMP),
 Colpirio.com,Retargeting / Optimization,
 Comcast,Service Provider,
-Comcast International France SAS/FreeWheel Media,Inc.,Ad Network;ads.stickyadstv.com;fwmrm.net
-Comcast International France SAS/FreeWheel Media, Inc.,Ad Platform,
+Comcast International France SAS/FreeWheel Media,Ad Platform;Ad Network,ads.stickyadstv.com;fwmrm.net
+Comcast International France SAS/FreeWheel Media, Inc.,Ad Platform;Ad Network,ads.stickyadstv.com;fwmrm.net
 Commanders Act,Data Management Platform (DMP),
 Commerce Connector,Customization,samsung.global.commerce-connector.com;shoplogos.commerce-connector.de
 communicationAds GmbH & Co. KG,Unknown,
@@ -1380,9 +1380,8 @@ Groupon, Inc.,Publisher Related,
 Grover,Customization,api.getgrover.com
 Gruveo,Customization,www.gruveo.com
 Gum Gum,Ad Network,
-GumGum,Inc.,Ad Network;rtb.gumgum.com;usersync.gumgum.com
-Gumgum,Unknown,
-GumGum, Inc.,Ad Platform,
+Gumgum,Ad Platform;Ad Network,rtb.gumgum.com;usersync.gumgum.com
+GumGum, Inc.,Ad Platform;Ad Network,rtb.gumgum.com;usersync.gumgum.com
 Habu,Data Management Platform (DMP),
 Haensel AMS GmbH,Data Provider / Aggregator,
 HaiyunX.com,Publisher Related,
@@ -1535,8 +1534,7 @@ INFINIA MOBILE S.L.,Unknown,
 Inflection Point Media,Ad Network,
 Influ2,Ad Platform,
 Infogroup,Data Provider / Aggregator;Ad Platform,
-Infolinks Media,LLC,Ad Network;*.infolinks.com;infolinks.com;router.infolinks.com
-Infolinks Media, LLC,Ad Network,
+Infolinks Media, LLC,Ad Network,*.infolinks.com;infolinks.com;router.infolinks.com
 INFOnline GmbH,Unknown,
 Inform,Ad Network,
 Informatica,Data Provider / Aggregator,
@@ -1846,7 +1844,7 @@ Madington,Unknown,
 Madison Logic, Inc.,Data Provider / Aggregator,
 MADVERTISE MEDIA,Unknown,
 Magnetic,Ad Platform,
-Magnite,Inc.,Ad Network;pixel.rubiconproject.com;rubiconproject.com;token.rubiconproject.com
+Magnite,Ad Network,pixel.rubiconproject.com;rubiconproject.com;token.rubiconproject.com
 Magnite CTV,Ad Network,tremorhub.com
 Magnite CTV, Inc.,Ad Network,
 Magnite DV,Ad Network,
@@ -1930,8 +1928,8 @@ MediaHub,Ad Exchange,
 mediaintelligence,Unknown,
 Medialand,Ad Server,
 Medialead,Ad Network,
-MediaMath,Inc.,Ad Network;mathtag.com;pixel.mathtag.com;sync.mathtag.com
-MediaMath, Inc.,Demand Side Platform (DSP),
+MediaMath,Demand Side Platform (DSP);Ad Network,mathtag.com;pixel.mathtag.com;sync.mathtag.com
+MediaMath, Inc.,Demand Side Platform (DSP);Ad Network,mathtag.com;pixel.mathtag.com;sync.mathtag.com
 MEDIAMETRIE,Unknown,
 MediaNet,Ad Network,
 Medianet,Ad Network,
@@ -2132,7 +2130,7 @@ Networld,Ad Platform,
 netzeffekt GmbH,Unknown,
 NEURAL.ONE,Unknown,
 Neustar,Ad Platform;Customization;Attribution / Analytics,aa.agkn.com;agkn.com
-Neustar, Inc., a TransUnion company,Ad Platform;Customization;Attribution / Analytics,aa.agkn.com;agkn.com
+Neustar, Inc.,Ad Platform;Customization;Attribution / Analytics,aa.agkn.com;agkn.com
 NeverBlue,Ad Platform,
 NEW EGO,Ad Agency,
 New Relic Inc.,Customization,bam-cell.nr-data.net;bam.eu01.nr-data.net;bam.nr-data.net;js-agent.newrelic.com;nr-data.net
@@ -2465,8 +2463,8 @@ Pubstack,Ad Network,
 PubWise, LLLP,Ad Exchange,
 Pulpo (An Entravision Company),Unknown,
 Pulse360,Ad Network,
-PulsePoint,Inc.,Ad Network;bh.contextweb.com
-PulsePoint, Inc.,Ad Platform,
+PulsePoint,Ad Platform;Ad Network,bh.contextweb.com
+PulsePoint, Inc.,Ad Platform;Ad Network,bh.contextweb.com
 Purch Group, Inc.,Ad Network,
 Pure Local Media GmbH,Unknown,
 Purechat,Social / Sharing Tools,
@@ -2585,7 +2583,7 @@ retailAds GmbH &amp; Co. KG,Unknown,
 Retargeting / Optimization,Unknown,
 Retargetly,Data Management Platform (DMP);Ad Platform,
 Retty,Ad Platform,
-Revcontent,Ad Network;revcontent.com
+Revcontent,Ad Network,revcontent.com
 Revcontent, LLC,Ad Network,
 Reve Marketing,Ad Platform,
 Reveal Mobile Inc,Unknown,
@@ -2654,10 +2652,10 @@ Salesfire,Retargeting / Optimization,
 Salesforce Audience Studio,Unknown,
 Salesforce DMP,Data Management Platform (DMP);Ad Network,beacon.krxd.net;krxd.net
 Salesforce Kruxx,Unknown,
-salesforce.com,inc.,Customization;www.herokucdn.com
-Salesforce.com, Inc.,Unknown,
-salesforce.com, inc.,Service Provider,
-Salesforce.com, LLC,Unknown,
+salesforce.com,Service Provider;Customization,www.herokucdn.com
+Salesforce.com, Inc.,Service Provider;Customization,www.herokucdn.com
+salesforce.com, inc.,Service Provider;Customization,www.herokucdn.com
+Salesforce.com, LLC,Service Provider;Customization,www.herokucdn.com
 SalesViewer,Data Provider / Aggregator,
 Samba,Ad Platform,
 Samba TV UK Limited,Unknown,
@@ -2720,7 +2718,7 @@ Shanghai Chaofan Cultural Communication Co., Ltd.,Ad Agency,
 Shareaholic,Ad Server,
 ShareThis,Ad Platform,
 ShareThis, Inc,Ad Network,
-Sharethrough,Ad Network;Inc,Ad Network;sharethrough.com
+Sharethrough,Ad Network,sharethrough.com
 Sharethrough, Inc,Ad Network,
 Shell - Taiwan,Publisher Related,
 SheMedia, LLC,Unknown,
@@ -2838,8 +2836,8 @@ SOMQUERY SOMTAG - (SevenOne Media),Ad Agency,
 Sonares GmbH,Unknown,
 SONATA by Taptap,Ad Platform;Ad Network,ads.sonataplatform.com
 Sonic Odeeo ltd,Unknown,
-Sonobi,Ad Network;Inc,Ad Network;go.sonobi.com;sync.go.sonobi.com
-Sonobi, Inc,Ad Exchange,
+Sonobi,Ad Exchange;Ad Network,go.sonobi.com;sync.go.sonobi.com
+Sonobi, Inc,Ad Exchange;Ad Network,
 Soreto,Ad Platform;Ad Network,assets.soreto.com;routes.soreto.com
 SoundCast,Unknown,
 Soundcast,Ad Network,
@@ -2876,8 +2874,8 @@ Spotible,Ad Platform,
 Spotify,Ad Network;Customization,embed-cdn.spotifycdn.com;encore.scdn.co;i.scdn.co;mosaic.scdn.co;open.scdn.co;open.spotifycdn.com;open.spotify.com;spotify.com
 Spotler - UK,Retargeting / Optimization,
 SpotView,Ad Agency,
-SpotX,Ad Network;Inc,Ad Network;spotxchange.com;sync.search.spotxchange.com
-SpotX, Inc,Ad Platform,
+SpotX,Ad Platform;Ad Network,spotxchange.com;sync.search.spotxchange.com
+SpotX, Inc,Ad Platform;Ad Network,
 SPP Solutions Ltd.,Unknown,
 Spreaker,Ad Network,
 Spreecast,Social / Sharing Tools,
@@ -3111,9 +3109,8 @@ Triapodi Ltd.,Unknown,
 Triblio,Retargeting / Optimization,
 Triple Lift,Ad Network,
 Triple13 Ltd,Unknown,
-TripleLift,Inc.,Ad Network;3lift.com;eb2.3lift.com
-Triplelift,Unknown,
-TripleLift, Inc.,Ad Platform,
+Triplelift,Ad Platform;Ad Network,3lift.com;eb2.3lift.com
+TripleLift, Inc.,Ad Platform;Ad Network,3lift.com;eb2.3lift.com
 Triton Digital,Ad Network,
 Triton Digital Canada Inc.,Ad Network,
 TROVIT,Unknown,
@@ -3392,7 +3389,7 @@ who's.amung.us,Website Tools,
 WideOrbit Inc.,Ad Platform,
 Wider Planet,Demand Side Platform (DSP),
 Widespace AB,Ad Platform,
-Wikimedia Foundation,Inc.,Customization;upload.wikimedia.org
+Wikimedia Foundation, Inc.,Customization,upload.wikimedia.org
 Wiland,Ad Platform,
 Windfall,Ad Platform,
 Wired,Publisher Related,
