@@ -1514,7 +1514,7 @@ Impactify SARL,Unknown,
 Impresiones Web, SL,Ad Network,
 Impression Desk Technologies Limited,Unknown,
 Improvado,Ad Exchange,
-Improve Digital,Ad Platform;Ad Network;360yield.com,hb.improvedigital.com
+Improve Digital,Ad Platform;Ad Network,360yield.com,hb.improvedigital.com
 Improve Digital by Azerion,Ad Network,
 In Mobi,Ad Network,
 In Mobi Pulse,Ad Platform,
@@ -1810,7 +1810,7 @@ Localytics,Attribution / Analytics,localytics.com
 Location Media Xchange,Ad Network,
 Location Sciences AI Ltd.,Unknown,
 LockerDome,Ad Network,
-Longtail Ad Solutions,Inc dba JW Player,Ad Network;assets-jpcust.jwpsrv.com;content.jwplatform.com;videos-cloudflare.jwpsrv.com;videos-cloudfront.jwpsrv.com;videos-cloudfront-usp.jwpsrv.com;videos-fms.jwpsrv.com;Customization;ssl.p.jwpcdn.com
+Longtail Ad Solutions,Ad Network,assets-jpcust.jwpsrv.com;content.jwplatform.com;videos-cloudflare.jwpsrv.com;videos-cloudfront.jwpsrv.com;videos-cloudfront-usp.jwpsrv.com;videos-fms.jwpsrv.com;Customization;ssl.p.jwpcdn.com
 Longtail Ad Solutions, Inc dba JW Player,Ad Platform,
 Loop Now Technologies Inc.,Customization,api.firework.tv;asset.fwcdn3.com;cdn4.fireworktv.com;fireworkadservices1.com;fireworkapi1.com
 LoopMe,Ad Platform,
@@ -1819,9 +1819,9 @@ LoremFlickr,Social / Sharing Tools,
 LOS DE IDEA SC,Ad Agency,
 LotaData, Inc.,Unknown,
 Lotame,Ad Platform,
-Lotame Solutions,inc,Ad Network;crwdcntrl.net;sync.crwdcntrl.net
-Lotame Solutions, Inc,Unknown,
-Lotame Solutions, inc,Data Management Platform (DMP),
+Lotame Solutions,Ad Network;Data Management Platform (DMP),crwdcntrl.net;sync.crwdcntrl.net
+Lotame Solutions, Inc,Ad Network;Data Management Platform (DMP),crwdcntrl.net;sync.crwdcntrl.net
+Lotame Solutions, inc,Ad Network;Data Management Platform (DMP),crwdcntrl.net;sync.crwdcntrl.net
 LotLinx,Ad Platform,
 Lotte,Ad Platform,
 Lucid,Ad Platform,
@@ -1847,7 +1847,7 @@ Madison Logic, Inc.,Data Provider / Aggregator,
 MADVERTISE MEDIA,Unknown,
 Magnetic,Ad Platform,
 Magnite,Inc.,Ad Network;pixel.rubiconproject.com;rubiconproject.com;token.rubiconproject.com
-Magnite CTV,Ad Network;Inc.,Ad Network;tremorhub.com
+Magnite CTV,Ad Network,tremorhub.com
 Magnite CTV, Inc.,Ad Network,
 Magnite DV,Ad Network,
 Magnite, Inc.,Sell Side Platform (SSP),
@@ -2131,8 +2131,8 @@ Netwise,Ad Platform,
 Networld,Ad Platform,
 netzeffekt GmbH,Unknown,
 NEURAL.ONE,Unknown,
-Neustar,Ad Platform;Inc.,a TransUnion company;Customization;aa.agkn.com;agkn.com
-Neustar, Inc., a TransUnion company,Attribution / Analytics
+Neustar,Ad Platform;Customization;Attribution / Analytics,aa.agkn.com;agkn.com
+Neustar, Inc., a TransUnion company,Ad Platform;Customization;Attribution / Analytics,aa.agkn.com;agkn.com
 NeverBlue,Ad Platform,
 NEW EGO,Ad Agency,
 New Relic Inc.,Customization,bam-cell.nr-data.net;bam.eu01.nr-data.net;bam.nr-data.net;js-agent.newrelic.com;nr-data.net
@@ -2153,8 +2153,8 @@ Next Media,Unknown,
 Next Media SRL,Unknown,
 Next Millennium Media INC,Ad Server,
 Next14,Ad Platform,
-NEXTCHANCE ASSETS,S.L.,Ad Network;widget.adsviu.com
-NEXTCHANCE ASSETS, S.L.,Unknown,
+NEXTCHANCE ASSETS,Ad Network,widget.adsviu.com
+NEXTCHANCE ASSETS, S.L.,Ad Network,
 Nextdoor,Social / Sharing Tools,
 Nextperf,Unknown,
 Nextperience,Ad Agency,
@@ -2312,7 +2312,7 @@ Passendo Aps,Unknown,
 PathDefender,Verification / Privacy,
 Pathformance,Ad Platform,
 PayClick,Ad Agency,
-PayPal,Inc.,Customization;paypal.com;paypalobjects.com;t.paypal.com;www.paypal.com;www.paypalobjects.com
+PayPal, Inc.,Customization,paypal.com;paypalobjects.com;t.paypal.com;www.paypal.com;www.paypalobjects.com
 Paypersale.ru,Ad Network,
 PBH Care,Publisher Related,
 Peanut Labs,Market research / Consumer survey,
@@ -2458,8 +2458,8 @@ Publicis Sapient,Ad Platform,
 Publisher First, Inc.,Unknown,
 Publishers Clearing House,Ad Platform,
 Publishers Internationale Pty Ltd,Unknown,
-PubMatic,Inc,Ad Network;hbopenbid.pubmatic.com;pubmatic.com;simage2.pubmatic.com
-PubMatic, Inc,Sell Side Platform (SSP),
+PubMatic,Ad Network;Sell Side Platform (SSP),hbopenbid.pubmatic.com;pubmatic.com;simage2.pubmatic.com
+PubMatic, Inc,Ad Network;Sell Side Platform (SSP),
 PubSquared,Ad Network,
 Pubstack,Ad Network,
 PubWise, LLLP,Ad Exchange,
@@ -2585,7 +2585,7 @@ retailAds GmbH &amp; Co. KG,Unknown,
 Retargeting / Optimization,Unknown,
 Retargetly,Data Management Platform (DMP);Ad Platform,
 Retty,Ad Platform,
-Revcontent,LLC,Ad Network;revcontent.com
+Revcontent,Ad Network;revcontent.com
 Revcontent, LLC,Ad Network,
 Reve Marketing,Ad Platform,
 Reveal Mobile Inc,Unknown,
@@ -2712,7 +2712,7 @@ SessionM,Service Provider,
 Seven Five Ten,Ad Platform,
 Seven Technologies S.L.,Unknown,
 SevenData S.p.a.,Unknown,
-Seznam.cz,a.s.,Ad Network;c.imedia.cz;c.seznam.cz;seznam.cz
+Seznam.cz,Ad Network,c.imedia.cz;c.seznam.cz;seznam.cz
 Seznam.cz, a.s.,Ad Network,
 SFR,Customization,sfr.fr
 SFT Video Network,Ad Network,
@@ -3172,9 +3172,8 @@ UberAds,Retargeting / Optimization,
 Uberflip,Ad Platform,
 UberMedia, Inc.,Unknown,
 UC Ads,Ad Network,
-ucfunnel,Ad Network,
-ucfunnel Co.,Ltd.,Ad Network;aralego.com
-ucfunnel Co., Ltd.,Ad Server,
+ucfunnel,Ad Server;Ad Network,
+ucfunnel Co., Ltd.,Ad Server;Ad Network,aralego.com
 Ultimate Audiences,Ad Platform,
 UM Agency,Ad Platform,
 UM Engage,Retargeting / Optimization,
