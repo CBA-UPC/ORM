@@ -67,7 +67,7 @@ def main(process):
         driver = build_driver(plugin, cache, update_ublock, process)
         while not driver:
             driver = build_driver(plugin, cache, update_ublock, process)
-        driver.set_page_load_timeout(60)
+        driver.set_page_load_timeout(30)
         driver_list.append([driver, plugin])
 
     if not driver_list:
@@ -112,7 +112,7 @@ parser.add_argument('-v', dest='verbose', type=int, default=3,
                     help='Verbose: 0=CRITICAL; 1=ERROR; 2=WARNING; 3=INFO; 4=DEBUG (Default: WARNING)')
 parser.add_argument('-d', dest='tmp', type=str, default='tmp',
                     help='Temporary folder (Default: "./tmp"')
-parser.add_argument('--deepness', dest='max_deep', type=int, default=4,
+parser.add_argument('--deepness', dest='max_deep', type=int, default=0,
                     help='Maximum recursive exploration of website internal links (Default: 0; scan only the homepages)')
 parser.add_argument('--start', dest='start', type=int, default=0,
                     help='Domain id start index (Default: 0). Used to skip some domains and start by a especific domain')
@@ -142,8 +142,8 @@ if __name__ == '__main__':
     if verbose[str(v)]:
         logger.setLevel(verbose[str(v)])
 
-    #display = Display(visible=False, size=(1920, 1080))
-    #display.start()
+    display = Display(visible=False, size=(1920, 1080))
+    display.start()
 
     # If thread parameter is auto get the (total-1) or the available CPU's, whichever is smaller
     logger.info("Calculating processes...")
@@ -211,4 +211,4 @@ if __name__ == '__main__':
                     queue_lock.release()
                 database.close()
             time.sleep(1)
-    #display.stop()
+    display.stop()

@@ -121,7 +121,7 @@ def reset_browser(driver, process, plugin, cache, update_ublock):
     driver = build_driver(plugin, cache, update_ublock, process)
     while not driver:
         driver = build_driver(plugin, cache, update_ublock, process)
-    driver.set_page_load_timeout(15)
+    driver.set_page_load_timeout(30)
     return driver
 
 
@@ -234,7 +234,7 @@ def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache,
         return driver, FAILED, REPEAT, link_dict, parsed_links
     else:
         # Insert data and clear storage before opening the next website
-        manage_requests(db, process, domain, web_list, current_deepness, plugin, temp_folder, geo_db)
+        manage_requests(db, process, domain, web_list, plugin, temp_folder, geo_db)
         try:
             storage.clear()
         except WebDriverException as e:

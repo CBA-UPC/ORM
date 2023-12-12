@@ -43,7 +43,7 @@ logging.config.fileConfig('logging.conf')
 logger = logging.getLogger("DATA_MANAGER")
 
 
-def manage_requests(db, process, domain, request_list, current_deepness, plugin, temp_folder, geo_db):
+def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_db):
     """ Inserts the URL data if non-existent and downloads resources if needed """
 
     t = utc_now()
@@ -87,6 +87,9 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
         url_info["security_info"] = security_info
         url_dict.append(url_info)
 
+    collectors = Connector(db, "collector")
+    collectors = collectors.get_all()
+    
     # Insert URL info
     # We sort them by request id and timestamp to link parent urls with child ones
     for elem in sorted(url_dict, key=lambda i: (int(i["requestId"]), int(i["timeStamp"]))):
@@ -144,13 +147,6 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
                 while not url.load(elem["hash"]) and seconds > 0:
                     seconds -= 1
                     time.sleep(1)
-            # If the URL pertains to an already known data collector link it in the database
-            collectors = Connector(db, "collector")
-            collectors = collectors.get_all()
-            name = clean_subdomain(url.values["url"])
-            for collector in collectors:
-                if collector.values["url1"] == name or (collector.values["url2"] and collector.values["url2"] == name):
-                    collector.add(url)
         else:
             # I URL has already been found update the timestamp
             url.values["update_timestamp"] = t
@@ -209,17 +205,22 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
                         compressed_code = zlib.compress(code)
                         resource.values["file"] = compressed_code
                         resource.values["size"] = size
+                        print("Llego")
                         # Compute the fuzzy hash
                         resource.values["fuzzy_hash"] = lsh_file(filename)
                         try:
                             with open(filename, 'r', encoding="utf-8") as f:
                                 code = f.read()
-                                if not re.search("outiqu", code) and re.search("utiq", code):
-                                    collector = Connector(db, "collector")
-                                    collector.load(hash_string("utiq"))
-                                    collector.add(url)
+                                for collector in collectors:
+                                    if collector.values["name"] == "utiq":
+                                        if not re.search("outiqu", code) and re.search("utiq", code):
+                                            collector.add(url)
+                                        else:
+                                            if re.search(collector.values["name"], code):
+                                                collector.add(url)
                         except Exception as e:
                             logger.error("(proc. %s) Decoding error: %s" % (process, str(e)))
+                        print("Llego 2")
                     else:
                         logger.error("(proc. %s) Error #1: Resource not correctly saved - %s" % (process, elem["url"]))
                 if not resource.save():
@@ -245,7 +246,6 @@ def manage_requests(db, process, domain, request_list, current_deepness, plugin,
             initiator_id = initiator_frame.values["id"]
         domain.add_double(url, plugin, {"third_party": elem["thirdParty"],
                                         "initiator_frame": initiator_id,
-                                        "deep_level": current_deepness,
                                         "insert_date": t,
                                         "update_timestamp": t})
 
