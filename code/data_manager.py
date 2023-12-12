@@ -89,7 +89,7 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
 
     collectors = Connector(db, "collector")
     collectors = collectors.get_all()
-    
+
     # Insert URL info
     # We sort them by request id and timestamp to link parent urls with child ones
     for elem in sorted(url_dict, key=lambda i: (int(i["requestId"]), int(i["timeStamp"]))):
@@ -205,7 +205,6 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                         compressed_code = zlib.compress(code)
                         resource.values["file"] = compressed_code
                         resource.values["size"] = size
-                        print("Llego")
                         # Compute the fuzzy hash
                         resource.values["fuzzy_hash"] = lsh_file(filename)
                         try:
@@ -220,7 +219,6 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                                                 collector.add(url)
                         except Exception as e:
                             logger.error("(proc. %s) Decoding error: %s" % (process, str(e)))
-                        print("Llego 2")
                     else:
                         logger.error("(proc. %s) Error #1: Resource not correctly saved - %s" % (process, elem["url"]))
                 if not resource.save():
