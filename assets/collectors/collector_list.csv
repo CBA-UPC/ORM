@@ -1946,7 +1946,7 @@ MEDIATA,Demand Side Platform (DSP),
 Mediatoday,Ad Platform,
 MediaV,Ad Network,
 Mediaveille,Ad Agency,
-Mediavine,Ad Network;Inc.,Ad Network;exchange.mediavine.com
+Mediavine,Ad Network,exchange.mediavine.com
 Mediavine, Inc.,Ad Network,
 MediaVoice,Ad Platform,
 MediaWallah,Data Provider / Aggregator;Ad Network,mediawallahscript.com
@@ -2089,8 +2089,8 @@ Nate,Customization,nate.com
 Native Touch,Retargeting / Optimization,
 nativeMsg,Social / Sharing Tools,
 Nativery Srl,Unknown,
-Nativo,Ad Network;Inc.,Ad Network;jadserve.postrelease.com;postrelease.com
-Nativo, Inc.,Ad Platform,
+Nativo,Ad Platform;Ad Network,jadserve.postrelease.com;postrelease.com
+Nativo, Inc.,Ad Platform;Ad Network,
 Natív Hirdetés Korlátolt Felelősségű Társaság,Ad Network,
 Navegg,Data Management Platform (DMP);Ad Platform,
 NAVER GLAD,Ad Network,
@@ -2770,8 +2770,8 @@ Sleeknote,Retargeting / Optimization,
 SLI Systems,Retargeting / Optimization,
 Slideshare,Social / Sharing Tools,
 Slingshot Technologies,Ad Network,
-Smaato,Ad Network;Inc.,Ad Network;s.ad.smaato.net
-Smaato, Inc.,Ad Exchange,
+Smaato,Ad Exchange;Ad Network,s.ad.smaato.net
+Smaato, Inc.,Ad Exchange;Ad Network,
 SMADEX, S.L.U.,Demand Side Platform (DSP),
 Smart AdServer,Ad Server;Ad Network,rtb-csync.smartadserver.com;smartadserver.com;ssp-csync.smartadserver.com
 Smart Adserver,Unknown,
@@ -2846,7 +2846,7 @@ Soundcloud,Ad Network,
 Source Creative,Ad Server,
 SourceKnowledge,Ad Network,
 Sourcepoint Technologies, Inc. (non-CMP),Unknown,
-Sovrn,Ad Network;Inc.,Ad Network;ce.lijit.com;lijit.com
+Sovrn,Ad Network,ce.lijit.com;lijit.com
 Sovrn, Inc.,Ad Network,
 Sparkle,Ad Agency,
 Sparteo,Ad Network,
@@ -2960,8 +2960,8 @@ TalkShoe,Service Provider,
 Tangoo S.R.L.,Ad Platform,
 Tanx,Ad Exchange,
 Tap Native,Ad Platform,
-Tapad,Ad Platform;Inc.,Ad Network;tapad.com;tapestry.tapad.com
-Tapad, Inc.,Ad Network,
+Tapad,Ad Platform;Ad Network,tapad.com;tapestry.tapad.com
+Tapad, Inc.,Ad Platform;Ad Network,
 Tapatalk,Social / Sharing Tools,
 TapFwd,Ad Network,
 Tapjoy, Inc.,Ad Platform,
@@ -3415,7 +3415,7 @@ X-LISTING Co., Ltd.,Demand Side Platform (DSP),
 X-Mode Social, Inc.,Unknown,
 XAD spoteffects GmbH,Unknown,
 xAd, Inc. dba GroundTruth,Retargeting / Optimization,
-Xandr,Ad Network;Inc.,Ad Network;adnxs.com;ib.adnxs.com;secure.adnxs.com;Customization;acdn.adnxs.com
+Xandr,Ad Network,adnxs.com;ib.adnxs.com;secure.adnxs.com;Customization;acdn.adnxs.com
 Xandr, Inc.,Ad Network,
 Xapads,Ad Exchange,
 Xaxis,Ad Network,
@@ -3447,7 +3447,7 @@ Yieldlab (Virtual Minds GmbH),Sell Side Platform (SSP);Ad Network,ad.yieldlab.ne
 Yieldlab AG,Unknown,
 YieldLift LLC,Ad Network,
 Yieldlove GmbH,Unknown,
-Yieldmo,Ad Network;Inc.,Ad Network;ads.yieldmo.com;sync-criteo.ads.yieldmo.com;yieldmo.com
+Yieldmo,Ad Network,ads.yieldmo.com;sync-criteo.ads.yieldmo.com;yieldmo.com
 Yieldmo, Inc.,Ad Network,
 Yieldr UK,Unknown,
 YOC AG,Ad Platform;Ad Network,t.visx.net
