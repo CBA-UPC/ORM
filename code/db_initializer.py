@@ -129,23 +129,25 @@ def init_fonts():
         font.save()
 
 
-def init_collectors():
-    collectors = [["utiq", ["utiq.com", "utiq-aws.net"]],
-                  ["ClickTale", ["clicktale.com", "clicktale.net"]], 
-                  ["eTracker", ["etracker.com"]], 
-                  ["hostpoint", ["clickmap.ch", "hostpoint.ch"]],
-                  ["Crazyegg", ["crazyegg.com"]], 
-                  ["Hotjar", ["hotjar.com"]], 
-                  ["mouseflow", ["mouseflow.com"]], 
-                  ["didomi", ["didomi.io", "privacy-center.org"]]]
-    for c in collectors:
-        collector = Connector(database, "collector")
-        collector.load(hash_string(c[0]))
-        collector.values["name"] = c[0]
-        collector.values["url1"] = c[1][0]
-        if len(c[1]) > 1:
-            collector.values["url2"] = c[1][1]
-        collector.save()
+def init_collectors(fname):
+    collector = Connector(database, "collector")
+    collector.load(hash_string("utiq"))
+    collector.values["name"] = "utiq"
+    collector.save()
+    category = Connector(database, "category")
+    category.load(hash_string("Service Provider"))
+    category.values["name"] = "Service Provider"
+    category.save()
+    with open(os.path.join(os.path.abspath("."), fname), "r") as f:
+        for line in f.readlines():
+            name = line.split(",")[0]
+            cat = line.split(",")[1]
+            collector.load(hash_string(name))
+            collector.values["name"] = name
+            collector.save()
+            category.load(hash_string(cat))
+            category.values["name"] = cat
+            category.save()
 
 
 def init_mouse_tracking_domains():
@@ -163,6 +165,8 @@ parser.add_argument('-start', dest='start', type=int, default=1, help='Start ind
 parser.add_argument('-end', dest='end', type=int, default=1000000, help='End index (Default: 1000000)', nargs='?')
 parser.add_argument('-f', dest='filename', type=str, default='',
                     help='File containing one domain per line or a Tranco List csv. Can be a zip or gz file')
+parser.add_argument('-cf', dest='collector', type=str, default='../assets/collectors/collector_list.csv',
+                    help='CSV File containing collector information.')
 
 
 if __name__ == '__main__':
@@ -188,7 +192,7 @@ if __name__ == '__main__':
     database = Db()
     init_plugins()
     init_types()
-    init_collectors()
+    init_collectors(args.collector)
     init_tracking()
     init_fonts()
     init_mouse_tracking_domains()

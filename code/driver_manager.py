@@ -181,6 +181,7 @@ def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache,
     time.sleep(10)
 
     # We collect again the URL after redirections
+    original_url = url
     url = driver.current_url
     
     # Collect website code and screenshot
@@ -241,7 +242,13 @@ def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache,
             driver = reset_browser(driver, process, plugin, cache, update_ublock)
             return driver, FAILED, NO_REPEAT, link_dict, parsed_links
         
+    # Finished parsing this URL
+    if original_url in link_dict.keys():
+        link_dict[original_url]["parsed"] = True
+    elif url in link_dict.keys():
+        link_dict[url]["parsed"] = True
     parsed_links += 1
+
     if current_deepness < max_deepness:
         # Collect internal links from website's own code
         link_dict = parse_internal_links(db, url, webcode, link_dict)
