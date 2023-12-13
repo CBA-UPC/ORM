@@ -214,9 +214,9 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                                     if collector.values["name"] == "utiq":
                                         if not re.search("outiqu", code) and re.search("utiq", code):
                                             url.add(collector)
-                                        else:
-                                            if re.search(collector.values["name"], code):
-                                               url.add(collector)
+                                    else:
+                                        if re.search(collector.values["name"], code):
+                                            url.add(collector)
                         except Exception as e:
                             logger.error("(proc. %s) Decoding error: %s" % (process, str(e)))
                     else:
