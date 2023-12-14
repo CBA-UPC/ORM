@@ -303,7 +303,7 @@ def parse_internal_links(db, url, webcode, link_dict):
 
         # Skip parsing links already present in the db
         link_url = Connector(db, "url")
-        if link_url.load(link):
+        if link_url.load(hash_string(link)):
             link_dict[link]["parsed"] = True
 
     return link_dict

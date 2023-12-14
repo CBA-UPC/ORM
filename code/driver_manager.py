@@ -129,12 +129,7 @@ def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache,
                update_ublock, geo_db, current_deepness, max_deepness, link_dict, parsed_links=0):
     """ Loads the website and extract its information. """
 
-    # Early discard already seen URLs
-    if url in link_dict.keys() and link_dict[url]["parsed"] == True:
-        parsed_links += 1
-        return driver, COMPLETED, NO_REPEAT, link_dict, parsed_links
-    
-    # Save uBlock Origin tab info to get back later
+    # Save uBlock tab info to get back when needed
     try:
         blocker_tab_handle = driver.current_window_handle
     except Exception as e:
