@@ -32,6 +32,7 @@ from selenium.common.exceptions import NoSuchWindowException
 from selenium.webdriver.common.alert import Alert
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
+import validators
 
 # Own modules
 from utils import utc_now, extract_domain
@@ -261,6 +262,10 @@ def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache,
             internal_link = link_dict[link]
             # Skip already seen links
             if internal_link["parsed"]:
+                continue
+
+            # Skip incorrect URLs
+            if not validators.url(link):
                 continue
 
             # If it is an external resource from other domain we explore it,
