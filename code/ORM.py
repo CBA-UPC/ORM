@@ -88,10 +88,11 @@ def main(process):
             domain.load(int(site))
             logger.info('[Worker %d] Domain %s' % (process, domain.values["name"]))
             for driver in driver_list:
-                # Clean the domain urls before crawling new info
-                request = "DELETE FROM domain_url WHERE domain_id = %d AND plugin_id = %d" % (domain.values["id"],
+                if clean:
+                    # Clean the domain info before crawling new info
+                    request = "DELETE FROM domain_url WHERE domain_id = %d AND plugin_id = %d" % (domain.values["id"],
                                                                                               driver[1].values['id'])
-                db.custom(request)
+                    db.custom(request)
                 # Launch the crawl
                 url = 'http://' + domain.values["name"] +'/'
                 extra_tries = 3
@@ -106,19 +107,21 @@ def main(process):
 
 
 parser = argparse.ArgumentParser(description='Online Resource Mapper (ORM)')
-parser.add_argument('-t', dest='threads', type=int, default=0,
-                    help='Number of threads/processes to span (Default: Auto)')
+parser.add_argument('-p', dest='threads', type=int, default=0,
+                    help='Number of scrape processes to span (Default: Auto)')
 parser.add_argument('-v', dest='verbose', type=int, default=3,
-                    help='Verbose: 0=CRITICAL; 1=ERROR; 2=WARNING; 3=INFO; 4=DEBUG (Default: WARNING)')
-parser.add_argument('-d', dest='tmp', type=str, default='tmp',
+                    help='Verbose: 0=CRITICAL; 1=ERROR; 2=WARNING; 3=INFO; 4=DEBUG (Default: INFO)')
+parser.add_argument('-t', dest='tmp', type=str, default='tmp',
                     help='Temporary folder (Default: "./tmp"')
 parser.add_argument('--deepness', dest='max_deep', type=int, default=0,
                     help='Maximum recursive exploration of website internal links (Default: 0; scan only the homepages)')
 parser.add_argument('--start', dest='start', type=int, default=0,
                     help='Domain id start index (Default: 0). Used to skip some domains and start by a especific domain')
+parser.add_argument('--clean', dest='clean', action="store_true",
+                    help='Cleans the domain info before crawling new info (Default: False)')
 parser.add_argument('--statefull', dest='cache', action="store_true",
                     help='Enables cache/cookies (Default: Clear cache/cookies)')
-parser.add_argument('-update-threshold', dest='update_threshold', type=int, default=30,
+parser.add_argument('--update-threshold', dest='update_threshold', type=int, default=30,
                     help='Period of days to skip rescanning a website (Default: 30 days).')
 parser.add_argument('--update-ublock', dest='update_ublock', action="store_true",
                     help='Updates uBlock pattern lists every time a new browser is launched (Default: no update)')
@@ -132,6 +135,7 @@ if __name__ == '__main__':
     # Take arguments
     args = parser.parse_args()
     cache = args.cache
+    clean = args.clean
     update_ublock = args.update_ublock
     update_threshold = args.update_threshold
     threads = args.threads

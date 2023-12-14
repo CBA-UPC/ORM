@@ -294,7 +294,6 @@ def parse_internal_links(db, url, webcode, link_dict):
         elif link and link[0] != 'h':
             link = url.split(extract_domain(url))[0] + extract_domain(url) + '/' + link
         
-
         # Insert link info
         if link not in link_dict.keys():
             link_dict[link] = {"linked_by": [url], "links_to": [], "parsed": False}
