@@ -292,5 +292,5 @@ if __name__ == '__main__':
                 process.start()
         
         ### TODO: Catch the Ctrl+C hotkey and clean the work queue and cleanly stop the current processes using the process object inside the dict
-        time.sleep(10)
+        time.sleep(5)
     display.stop()
