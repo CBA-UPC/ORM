@@ -100,7 +100,6 @@ def main(process):
             completed = False
             repeat = True
             while extra_tries > 0 and not completed and repeat:
-                logger.info('[Worker %d] Opening URL: %s' % (process, url))
                 extra_tries -= 1
                 driver, completed, repeat, links = visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublock, geo_db)
             if completed:
