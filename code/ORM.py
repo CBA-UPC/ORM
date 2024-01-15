@@ -264,7 +264,7 @@ if __name__ == '__main__':
 
         # If some process does not respond for more than 5 minutes kill it and respawn it
         for k in process_dict.keys():
-            if process_dict[k]["last_message"] < (datetime.now() - timedelta(minutes=1)):
+            if process_dict[k]["last_message"] < (datetime.now() - timedelta(minutes=5)):
                 # Save the failed URL for postmortem diagnostic
                 with open(os.path.join(os.path.abspath("."), "failed_urls.txt"), "a", encoding="utf-8") as f:
                     f.write(process_dict[k]["url"] + "\n")
@@ -293,5 +293,5 @@ if __name__ == '__main__':
                 process.start()
         
         ### TODO: Catch the Ctrl+C hotkey and clean the work queue and cleanly stop the current processes using the process object inside the dict
-        time.sleep(1)
+        time.sleep(10)
     display.stop()
