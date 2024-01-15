@@ -296,7 +296,7 @@ def parse_internal_links(url, webcode):
         # If it is a malformed link try to fix it by adding the hosting domain
         if link and link[0] == '/':
             link = url.split(extract_domain(url))[0] + extract_domain(url) + link
-        elif link and link[0] != "h" and 1 < len(link.split("/")[0].split(".")) < 3:
+        elif link and link[0] != "h" and 1 < len(link.split("/")[0].split(".")) < 4:
             link = "http://" + link
         elif link and link[0:4] != 'http':
             link = url.split(extract_domain(url))[0] + extract_domain(url) + '/' + link
