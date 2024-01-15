@@ -281,7 +281,7 @@ def insert_link(db, parent_url, link_url):
 
 
 def parse_internal_links(url, webcode):
-    """ Obtains a dictionary with the internal links on the webcode and for each one of them if it has to be scraped or not. """
+    """ Obtains a dictionary with the internal links on the webcode """
 
     links = []
     soup = BeautifulSoup(webcode, 'lxml')

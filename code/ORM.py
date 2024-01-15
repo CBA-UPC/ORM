@@ -32,6 +32,7 @@ from multiprocessing import Process, Pool, Queue, cpu_count, Lock, Manager
 from db_manager import Db, Connector
 from driver_manager import build_driver, visit_site
 from data_manager import insert_link
+from utils import hash_string
 
 # Third-party modules
 from geoip2 import database as geolocation
@@ -108,9 +109,16 @@ def main(process):
                     queue_lock.acquire()
                     for link in links:
                         if link not in url_list:
-                            url_list.append(link)
-                            work_queue.put([site, link, deepness + 1, url])
+                            link_url = Connector(db, "url")
+                            if not link_url.load(hash_string(link)):
+                                url_list.append(link)
+                                work_queue.put([site, link, deepness + 1, url])
                     queue_lock.release()
+            try:
+                url_list.remove(url)
+            except Exception as e:
+                logger.error("[Main process] Error removing %s from TODO work - %s" % (url, str(e)))
+
 
 
 parser = argparse.ArgumentParser(description='Online Resource Mapper (ORM)')
