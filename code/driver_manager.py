@@ -209,7 +209,8 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
             with open(filename, 'rb') as f:
                 blob_value = f.read()
                 compressed_screenshot = zlib.compress(blob_value)
-        os.remove(filename)
+        if os.path.isfile(os.path.join(temp_folder, domain.values["name"] + 'ss.png')):
+            os.remove(filename)
 
     # Close the browser's URL tab
     try:
