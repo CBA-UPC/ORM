@@ -489,6 +489,12 @@ class Connector(object):
             return 0
         if len(result) > 1:
             logger.warning("Loading " + self.table + " '" + str(value) + "': Too many query results")
+            affected_tables = []
+            for ct in CROSS_TABLES:
+                if ct.split("_")[0] == self.table or ct.split("_")[1] == self.table:
+                    affected_tables.append(ct)
+            for at in affected_tables:
+                self.db.custom("UPDATE %s SET %s_id = %d WHERE %s_id = %d" % (at, self.table, result[0], self.table, result[1]))
             #return 0
         self.values = result[0]
         return self.values["id"]
