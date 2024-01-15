@@ -24,12 +24,14 @@ import os
 import time
 import logging.config
 import queue
+import signal
 from datetime import datetime, timezone, timedelta
-from multiprocessing import Pool, Queue, cpu_count, Lock
+from multiprocessing import Process, Pool, Queue, cpu_count, Lock, Manager
 
 # Own modules
 from db_manager import Db, Connector
 from driver_manager import build_driver, visit_site
+from data_manager import insert_link
 
 # Third-party modules
 from geoip2 import database as geolocation
@@ -54,60 +56,67 @@ def main(process):
     # Load the DB manager for this process
     db = Db()
 
-    # Load enabled plugins
-    plugin_list = Connector(db, "plugin")
-    plugin_list = plugin_list.get_all({"enabled": 1})
-
     # Load geolocation database
     geo_db = geolocation.Reader(config.GEOCITY_FILE_PATH)
 
     # Load the selenium driver with proper plugins
-    driver_list = []
-    for plugin in plugin_list:
-        driver = build_driver(plugin, cache, update_ublock, process)
-        while not driver:
-            driver = build_driver(plugin, cache, update_ublock, process)
-        driver.set_page_load_timeout(30)
-        driver_list.append([driver, plugin])
+    driver = build_driver(cache, update_ublock, process)
+    while not driver:
+        driver = build_driver(cache, update_ublock, process)
+    driver.set_page_load_timeout(30)
 
-    if not driver_list:
+    if not driver:
         return 1
 
     while True:
         try:
             queue_lock.acquire()
-            site = work_queue.get(block=False)
+            work = work_queue.get(block=False)
+            site = work[0]
+            url = work[1]
+            deepness = work[2]
+            parent = work[3]
             queue_lock.release()
         except queue.Empty:
             queue_lock.release()
-            time.sleep(1)
+            status_queue_lock.acquire()
+            my_dict = driver.capabilities 
+            status_queue.put([str(process), "", os.getpid(), driver.service.process.pid, my_dict['moz:processID'], datetime.now()])
+            status_queue_lock.release()
+            time.sleep(10)
         except Exception as e:
             logger.error("[Worker %d] %s" % (process, str(e)))
         else:
+            status_queue_lock.acquire()
+            my_dict = driver.capabilities 
+            status_queue.put([str(process), url, os.getpid(), driver.service.process.pid, my_dict['moz:processID'], datetime.now()])
+            status_queue_lock.release()
             domain = Connector(db, "domain")
             domain.load(int(site))
-            logger.info('[Worker %d] Domain %s' % (process, domain.values["name"]))
-            for driver in driver_list:
-                if clean:
-                    # Clean the domain info before crawling new info
-                    request = "DELETE FROM domain_url WHERE domain_id = %d AND plugin_id = %d" % (domain.values["id"],
-                                                                                              driver[1].values['id'])
-                    db.custom(request)
-                # Launch the crawl
-                url = 'http://' + domain.values["name"] +'/'
-                extra_tries = 3
-                completed = False
-                repeat = True
-                while extra_tries > 0 and not completed and repeat:
-                    extra_tries -= 1
-                    driver[0], completed, repeat, link_dict, parsed_links = visit_site(db, process, driver[0], domain, url,
-                                                              driver[1], temp_folder, cache, update_ublock, geo_db, 0, max_deep, {})
-                # TODO: Try to remove websites when unable to get info??
-                #  -> if a connection problem happens all the websites will be removed...
+            logger.info('[Worker %d] URL: %s' % (process, url))
+
+            # Launch the crawl
+            extra_tries = 3
+            completed = False
+            repeat = True
+            while extra_tries > 0 and not completed and repeat:
+                logger.info('[Worker %d] Opening URL: %s' % (process, url))
+                extra_tries -= 1
+                driver, completed, repeat, links = visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublock, geo_db)
+            if completed:
+                if parent:
+                    insert_link(db, parent, url)
+                if len(links) > 0 and max_deep > deepness:
+                    queue_lock.acquire()
+                    for link in links:
+                        if link not in url_list:
+                            url_list.append(link)
+                            work_queue.put([site, link, deepness + 1, url])
+                    queue_lock.release()
 
 
 parser = argparse.ArgumentParser(description='Online Resource Mapper (ORM)')
-parser.add_argument('-p', dest='threads', type=int, default=0,
+parser.add_argument('-p', dest='processes', type=int, default=0,
                     help='Number of scrape processes to span (Default: Auto)')
 parser.add_argument('-v', dest='verbose', type=int, default=3,
                     help='Verbose: 0=CRITICAL; 1=ERROR; 2=WARNING; 3=INFO; 4=DEBUG (Default: INFO)')
@@ -119,7 +128,7 @@ parser.add_argument('--start', dest='start', type=int, default=0,
                     help='Domain id start index (Default: 0). Used to skip some domains and start by a especific domain')
 parser.add_argument('--clean', dest='clean', action="store_true",
                     help='Cleans the domain info before crawling new info (Default: False)')
-parser.add_argument('--statefull', dest='cache', action="store_true",
+parser.add_argument('--statusfull', dest='cache', action="store_true",
                     help='Enables cache/cookies (Default: Clear cache/cookies)')
 parser.add_argument('--update-threshold', dest='update_threshold', type=int, default=30,
                     help='Period of days to skip rescanning a website (Default: 30 days).')
@@ -138,7 +147,7 @@ if __name__ == '__main__':
     clean = args.clean
     update_ublock = args.update_ublock
     update_threshold = args.update_threshold
-    threads = args.threads
+    processes = int(args.processes)
     max_deep = args.max_deep
     temp_folder = os.path.join(os.path.abspath("."), args.tmp)
     v = args.verbose
@@ -151,7 +160,7 @@ if __name__ == '__main__':
 
     # If thread parameter is auto get the (total-1) or the available CPU's, whichever is smaller
     logger.info("Calculating processes...")
-    if not threads:
+    if not processes:
         cpu = cpu_count()
         try:
             available_cpu = len(os.sched_getaffinity(0))
@@ -160,59 +169,129 @@ if __name__ == '__main__':
             available_cpu = cpu
         # Save 1 CPU for other purposes
         if cpu > 1 and cpu == available_cpu:
-            threads = cpu - 1
+            processes = cpu - 1
         else:
-            threads = available_cpu
-    logger.info("Processes to run: %d " % threads)
+            processes = available_cpu
+    logger.info("Processes to run: %d " % processes)
 
     # Initialize job queue
     work_queue = Queue()
     queue_lock = Lock()
 
+    status_queue = Queue()
+    status_queue_lock = Lock()
+    process_dict = {}
+    dead_processes = []
+    manager = Manager()
+    url_list = manager.list([])
+
     # Create and call the workers
     logger.debug("[Main process] Spawning new workers...")
-    with Pool(processes=threads) as pool:
-        p = pool.map_async(main, [i for i in range(int(threads))])
+    for i in range(processes):
+        process =  Process(target=main, args=[i])
+        process_dict[str(i)] = {"process": process, 
+                                "url": "", 
+                                "pid": -1, 
+                                "geckodriver_pid": -1, 
+                                "browser_pid": -1, 
+                                "last_message": datetime.now()}
+        process.start()
 
-        pending = ["0"]
-        last_id = args.start
+    pending = ["0"]
+    last_id = args.start
+    while True:
+        # Insert new work into queue if needed.
+        queue_lock.acquire()
+        qsize = work_queue.qsize()
+        logger.info("[Main process] Queued work %d" % qsize)
+        queue_lock.release()
+        if qsize < (0.5 * processes):
+            logger.debug("[Main process] Getting work")
+            now = datetime.now(timezone.utc)
+            td = timedelta(-1 * update_threshold)
+            period = now + td
+            rq = 'SELECT id, name FROM domain'
+            if args.priority:
+                rq += ' WHERE priority = 1'
+            else:
+                rq += ' WHERE priority = 0 AND update_timestamp < "%s"' % (period.strftime('%Y-%m-%d %H:%M:%S'))
+            rq += ' AND id NOT IN (%s)' % ','.join(pending)
+            rq += ' AND id > %s' % last_id
+            rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (int(0.5 * processes))
+            pending = ["0"]
+            database = Db()
+            results = database.custom(rq)
+            # If no new work wait ten seconds and retry
+            if len(results) > 0:
+                # Initialize job queue
+                logger.debug("[Main process] Enqueuing work")
+                queue_lock.acquire()
+                for result in results:
+                    if clean:
+                        # Clean the domain info before crawling new info
+                        request = "DELETE FROM domain_url WHERE domain_id = %d" % result["id"]
+                        database.custom(request)
+                    if args.priority:
+                        domain = Connector(database, "domain")
+                        domain.load(int(result["id"]))
+                        domain.values["priority"] = 0
+                        domain.values.pop("update_timestamp")
+                        domain.save()
+                    url = 'http://' + result["name"] +'/'
+                    url_list.append(url)
+                    work_queue.put([result["id"], url, 0, None])
+                    pending.append(str(result["id"]))
+                    last_id = int(result["id"])
+                queue_lock.release()
+            database.close()
+        
+        # Check the processes status
+        status_queue_lock.acquire()
         while True:
-            # Insert new work into queue if needed.
-            queue_lock.acquire()
-            qsize = work_queue.qsize()
-            queue_lock.release()
-            if qsize < (2 * threads):
-                logger.debug("[Main process] Getting work")
-                now = datetime.now(timezone.utc)
-                td = timedelta(-1 * update_threshold)
-                period = now + td
-                rq = 'SELECT id FROM domain'
-                if args.priority:
-                    rq += ' WHERE priority = 1'
-                else:
-                    rq += ' WHERE priority = 0 AND update_timestamp < "%s"' % (period.strftime('%Y-%m-%d %H:%M:%S'))
-                rq += ' AND id NOT IN (%s)' % ','.join(pending)
-                rq += ' AND id > %s' % last_id
-                rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (2 * threads)
-                pending = ["0"]
-                database = Db()
-                results = database.custom(rq)
-                # If no new work wait ten seconds and retry
-                if len(results) > 0:
-                    # Initialize job queue
-                    logger.debug("[Main process] Enqueuing work")
-                    queue_lock.acquire()
-                    for result in results:
-                        if args.priority:
-                            domain = Connector(database, "domain")
-                            domain.load(int(result["id"]))
-                            domain.values["priority"] = 0
-                            domain.values.pop("update_timestamp")
-                            domain.save()
-                        work_queue.put(result["id"])
-                        pending.append(str(result["id"]))
-                        last_id = int(result["id"])
-                    queue_lock.release()
-                database.close()
-            time.sleep(1)
+            try:
+                process_status = status_queue.get(block=False)
+                process_dict[process_status[0]]["url"] = process_status[1]
+                process_dict[process_status[0]]["pid"] = process_status[2]
+                process_dict[process_status[0]]["geckodriver_pid"] = process_status[3]
+                process_dict[process_status[0]]["browser_pid"] = process_status[4]
+                process_dict[process_status[0]]["last_message"] = process_status[-1]
+            except queue.Empty:
+                break
+            except Exception as e:
+                logger.error("[Main process] Status queue parsing error: %s" % str(e))
+                queue_not_empty = False
+        status_queue_lock.release()
+
+        # If some process does not respond for more than 5 minutes kill it and respawn it
+        for k in process_dict.keys():
+            if process_dict[k]["last_message"] < (datetime.now() - timedelta(minutes=1)):
+                # Save the failed URL for postmortem diagnostic
+                with open(os.path.join(os.path.abspath("."), "failed_urls.txt"), "a", encoding="utf-8") as f:
+                    f.write(process_dict[k]["url"] + "\n")
+
+                # Kill worker as well as its own geckodriver and browser instances
+                try:
+                    os.kill(process_dict[k]["geckodriver_pid"], signal.SIGKILL)
+                except Exception as e:
+                    logger.error("[Main process] Error killing process %d: %s)" % (process_dict[k]["geckodriver_pid"], str(e)))
+                try:
+                    os.kill(process_dict[k]["browser_pid"], signal.SIGKILL)
+                except Exception as e:
+                    logger.error("[Main process] Error killing process %d: %s)" % (process_dict[k]["browser_pid"], str(e)))
+                try:
+                    os.kill(process_dict[k]["pid"], signal.SIGKILL)
+                except Exception as e:
+                    logger.error("[Main process] Error killing process %d: %s)" % (process_dict[k]["pid"], str(e)))
+
+                # Create new worker and launch it
+                process = Process(target=main, args=[int(k)])
+                process_dict[k] = {"process": process, 
+                                   "pid": -1, 
+                                   "geckodriver_pid": -1, 
+                                   "browser_pid": -1, 
+                                   "last_message": datetime.now()}
+                process.start()
+        
+        ### TODO: Catch the Ctrl+C hotkey and clean the work queue and cleanly stop the current processes using the process object inside the dict
+        time.sleep(1)
     display.stop()

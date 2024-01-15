@@ -36,6 +36,7 @@ import validators
 
 # Own modules
 from utils import utc_now, extract_domain
+from db_manager import Db, Connector
 from data_manager import manage_requests, parse_internal_links, insert_link
 from session_storage import SessionStorage
 
@@ -59,7 +60,7 @@ def get_extension_uuid(path, identifier):
     return uuid
 
 
-def build_driver(plugin, cache, update_ublock, process):
+def build_driver(cache, update_ublock, process):
     """ Creates the selenium driver to be used by the script and loads the corresponding plugin if needed. """
     try:
         profile = FirefoxProfile()
@@ -90,24 +91,31 @@ def build_driver(plugin, cache, update_ublock, process):
         return FAILED
     try:
         time.sleep(2)
+
+        # Load enabled plugins
+        db = Db()
+        plugin_list = Connector(db, "plugin")
+        plugin_list = plugin_list.get_all({"enabled": 1})
+
         # Load received plugin (except for vanilla)
-        if plugin.values["name"] != "Vanilla":
-            plugin_path = os.path.join(os.path.abspath("."), plugin.values["path"])
-            driver.install_addon(plugin_path, temporary=True)
-            time.sleep(2)
-            profile_path = str(driver.capabilities['moz:profile'])
-            uuid = get_extension_uuid(profile_path, plugin.values["identifier"])
-            if plugin.values['custom'] and update_ublock:
-                driver.get(plugin.values['url'].replace("UUID", uuid))
-                time.sleep(10)
-                try:
-                    driver.find_element_by_xpath(plugin.values['xpath_to_click']).click()
-                except NoSuchElementException as e:
-                    driver.switch_to.frame(0)
-                    driver.find_element_by_xpath(plugin.values['xpath_to_click']).click()
-                time.sleep(20)
-            if plugin.values["background"]:
-                driver.get(plugin.values["background"].replace("UUID", uuid))
+        for plugin in plugin_list:
+            if plugin.values["name"] != "Vanilla":
+                plugin_path = os.path.join(os.path.abspath("."), plugin.values["path"])
+                driver.install_addon(plugin_path, temporary=True)
+                time.sleep(2)
+                profile_path = str(driver.capabilities['moz:profile'])
+                uuid = get_extension_uuid(profile_path, plugin.values["identifier"])
+                if plugin.values['custom'] and update_ublock:
+                    driver.get(plugin.values['url'].replace("UUID", uuid))
+                    time.sleep(10)
+                    try:
+                        driver.find_element_by_xpath(plugin.values['xpath_to_click']).click()
+                    except NoSuchElementException as e:
+                        driver.switch_to.frame(0)
+                        driver.find_element_by_xpath(plugin.values['xpath_to_click']).click()
+                    time.sleep(20)
+                if plugin.values["background"]:
+                    driver.get(plugin.values["background"].replace("UUID", uuid))
         return driver
     except Exception as e:
         driver.quit()
@@ -115,37 +123,38 @@ def build_driver(plugin, cache, update_ublock, process):
         return FAILED
 
 
-def reset_browser(driver, process, plugin, cache, update_ublock):
+def reset_browser(driver, process, cache, update_ublock):
     """ Reset the browser to the default state. """
 
     driver.quit()
-    driver = build_driver(plugin, cache, update_ublock, process)
+    driver = build_driver(cache, update_ublock, process)
     while not driver:
-        driver = build_driver(plugin, cache, update_ublock, process)
+        driver = build_driver(cache, update_ublock, process)
     driver.set_page_load_timeout(30)
     return driver
 
 
-def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache, 
-               update_ublock, geo_db, current_deepness, max_deepness, link_dict, parsed_links=0):
+def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublock, geo_db):
     """ Loads the website and extract its information. """
 
+    links = []
     # Save uBlock tab info to get back when needed
     try:
         blocker_tab_handle = driver.current_window_handle
     except Exception as e:
         logger.error("Error saving uBlock tab: %s (proc. %d)" % (str(e), process))
-        driver = reset_browser(driver, process, plugin, cache, update_ublock)
-        return driver, FAILED, REPEAT, link_dict, parsed_links
+        driver = reset_browser(driver, process, cache, update_ublock)
+        return driver, FAILED, REPEAT, links
     try:
         driver.execute_script('''window.open();''')
         second_tab_handle = driver.window_handles[-1]
         driver.switch_to.window(second_tab_handle)
     except WebDriverException as e:
         logger.error("WebDriverException (1) on %s / Error: %s (proc. %d)" % (domain.values["name"], str(e), process))
-        driver = reset_browser(driver, process, plugin, cache, update_ublock)
-        return driver, FAILED, REPEAT, link_dict, parsed_links
+        driver = reset_browser(driver, process, cache, update_ublock)
+        return driver, FAILED, REPEAT, links
 
+    logger.info('[Worker %d] URL: %s' % (process, url))
     # Load the website and wait some time inside it
     try:
         driver.get(url)
@@ -158,25 +167,25 @@ def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache,
             storage.clear()
         except NoSuchWindowException as e:
             logger.error("(proc. %d) Error accessing the session storage: %s" % (process, str(e)))
-            driver = reset_browser(driver, process, plugin, cache, update_ublock)
+            driver = reset_browser(driver, process, cache, update_ublock)
         except WebDriverException as e:
             logger.error("(proc. %d) Error clearing session storage: %s" % (process, str(e)))
-            driver = reset_browser(driver, process, plugin, cache, update_ublock)
-        return driver, FAILED, REPEAT, link_dict, parsed_links
+            driver = reset_browser(driver, process, cache, update_ublock)
+        return driver, FAILED, REPEAT, links
     except WebDriverException as e:
         logger.warning("WebDriverException (2) on %s / Error: %s (proc. %d)" % (domain.values["name"], str(e), process))
-        driver = reset_browser(driver, process, plugin, cache, update_ublock)
+        driver = reset_browser(driver, process, cache, update_ublock)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
-        return driver, FAILED, NO_REPEAT, link_dict, parsed_links
+        return driver, FAILED, NO_REPEAT, links
     except Exception as e:
         logger.error("%s (proc. %d)" % (str(e), process))
-        driver = reset_browser(driver, process, plugin, cache, update_ublock)
+        driver = reset_browser(driver, process, cache, update_ublock)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
-        return driver, FAILED, NO_REPEAT, link_dict, parsed_links
+        return driver, FAILED, NO_REPEAT, links
 
     # Wait some time inside the website
     time.sleep(10)
@@ -192,7 +201,7 @@ def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache,
     webcode = driver.page_source
     size = os.stat(filename).st_size
     compressed_screenshot = None
-    if size > 0:
+    if not domain.values["screenshot"] and size > 0:
         # Compress the screenshot to save it into the database when needed
         with open(filename, 'rb') as f:
             blob_value = f.read()
@@ -214,16 +223,16 @@ def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache,
         driver.close()
     except WebDriverException as e:
         logger.warning("WebDriverException (3) on %s / Error: %s (proc. %d)" % (domain.values["name"], str(e), process))
-        driver = reset_browser(driver, process, plugin, cache, update_ublock)
-        return driver, FAILED, REPEAT, link_dict, parsed_links
+        driver = reset_browser(driver, process, cache, update_ublock)
+        return driver, FAILED, REPEAT, links
 
     # Process traffic from uBlock Origin tab sessionStorage
     try:
         driver.switch_to.window(blocker_tab_handle)
     except Exception as e:
         logger.error("Error accessing uBlock tab: %s (proc. %d)" % (str(e), process))
-        driver = reset_browser(driver, process, plugin, cache, update_ublock)
-        return driver, FAILED, REPEAT, link_dict, parsed_links
+        driver = reset_browser(driver, process, cache, update_ublock)
+        return driver, FAILED, REPEAT, links
     try:
         storage = SessionStorage(driver)
         web_list = {}
@@ -231,74 +240,23 @@ def visit_site(db, process, driver, domain, url, plugin, temp_folder, cache,
             web_list[key] = storage[key]
     except NoSuchWindowException as e:
         logger.error("(proc. %d) Error accessing the session storage: %s" % (process, str(e)))
-        driver = reset_browser(driver, process, plugin, cache, update_ublock)
-        return driver, FAILED, REPEAT, link_dict, parsed_links
+        driver = reset_browser(driver, process, cache, update_ublock)
+        return driver, FAILED, REPEAT, links
     else:
         # Insert data and clear storage before opening the next website
-        manage_requests(db, process, domain, web_list, plugin, temp_folder, geo_db)
+        manage_requests(db, process, domain, web_list, temp_folder, geo_db)
+        links = parse_internal_links(url, webcode)
         try:
             storage.clear()
         except WebDriverException as e:
             logger.error("(proc. %d) Error clearing session storage: %s" % (process, str(e)))
-            driver = reset_browser(driver, process, plugin, cache, update_ublock)
-            return driver, FAILED, NO_REPEAT, link_dict, parsed_links
+            driver = reset_browser(driver, process, cache, update_ublock)
+            return driver, FAILED, NO_REPEAT, links
         
-    # Finished parsing this URL
-    if original_url in link_dict.keys():
-        link_dict[original_url]["parsed"] = True
-    elif url in link_dict.keys():
-        link_dict[url]["parsed"] = True
-    parsed_links += 1
-
-    if current_deepness < max_deepness:
-        # Collect internal links from website's own code
-        link_dict = parse_internal_links(db, url, webcode, link_dict)
-        total_links = len(link_dict.keys())
-        if current_deepness > 0:
-            logger.info("(proc. %s): '%s' parsed links [%d/%d]" % (process, domain.values["name"], parsed_links, total_links))
-
-        # Scrape internal links if needed
-        for link in link_dict[url]["links_to"]:
-            internal_link = link_dict[link]
-            # Skip already seen links
-            if internal_link["parsed"]:
-                continue
-
-            # Skip incorrect URLs
-            if not validators.url(link):
-                continue
-
-            # If it is an external resource from other domain we explore it,
-            # but we do not explore any of its internal links
-            deepness = current_deepness + 1
-            if extract_domain(link) != extract_domain(url):
-                deepness = max_deepness
-            
-            # Scrape the link
-            extra_tries = 3
-            completed = False
-            repeat = True
-            logger.info("(proc. %s): Parsing %s" % (process, link))
-            while extra_tries > 0 and not completed and repeat:
-                extra_tries -= 1
-                driver, completed, repeat, link_dict, parsed_links = visit_site(db, process, driver, domain, link, plugin, temp_folder, cache, 
-                                                       update_ublock, geo_db, deepness, max_deepness, link_dict, parsed_links)
-            if extra_tries > 0:
-                insert_link(db, url, link)
-    else:
-        total_links = len(link_dict.keys())
-        if current_deepness > 0:
-            logger.info("(proc. %s): '%s' parsed links [%d/%d]" % (process, domain.values["name"], parsed_links, total_links))
-
-
-    # If this is one of the recursive calls do not save the domain info yet
-    if current_deepness != 0:
-        return driver, COMPLETED, NO_REPEAT, link_dict, parsed_links
-    
     # Save the screenshot and update the db update timestamp
     domain.values["update_timestamp"] = utc_now()
     domain.values["priority"] = 0
     if compressed_screenshot:
         domain.values["screenshot"] = compressed_screenshot
     domain.save()
-    return driver, COMPLETED, NO_REPEAT, link_dict, parsed_links
+    return driver, COMPLETED, NO_REPEAT, links

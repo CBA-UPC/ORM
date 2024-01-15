@@ -138,6 +138,16 @@ def init_collectors(fname):
     category.load(hash_string("Service Provider"))
     category.values["name"] = "Service Provider"
     category.save()
+    collector.add(category)
+    category.load(hash_string("Ad Exchange"))
+    category.values["name"] = "Service Provider"
+    category.save()
+    collector.add(category)
+    for c in ["britepoolid", "lipbid", "criteId", "merkleId", "parrableId", "connectid", "tapadId", "quantcastId", "pubProvideId", "pairId"]:
+        collector.load(hash_string(c))
+        collector.values["name"] = c
+        collector.save()
+        collector.add(category)
     with open(os.path.join(os.path.abspath("."), fname), "r") as f:
         for line in f.readlines():
             if len(line.split(", ")) == 1 and len(line.split(",")) > 1:

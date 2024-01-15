@@ -43,7 +43,7 @@ logging.config.fileConfig('logging.conf')
 logger = logging.getLogger("DATA_MANAGER")
 
 
-def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_db):
+def manage_requests(db, process, domain, request_list, temp_folder, geo_db):
     """ Inserts the URL data if non-existent and downloads resources if needed """
 
     t = utc_now()
@@ -156,6 +156,7 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
             host = Connector(db, "host")
             if not host.load(hash_string(host_domain)):
                 host.values["name"] = host_domain
+                host.values["insert_date"] = t
                 host.values["update_timestamp"] = t
                 if not host.save():
                     host.load(hash_string(host_domain))
@@ -163,6 +164,8 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
             if not address.load(hash_string(elem["server_ip"])):
                 address.values["address"] = elem["server_ip"]
                 address.values["is_EU"] = 0
+                address.values["insert_date"] = t
+                address.values["update_timestamp"] = t
                 location = extract_location(elem["server_ip"], geo_db)
                 if location["is_EU"]:
                     address.values["is_EU"] = 1
@@ -212,7 +215,12 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
                                 code = f.read()
                                 for collector in collectors:
                                     if collector.values["name"] == "utiq":
-                                        if not re.search("outiqu", code) and re.search("utiq", code):
+                                        false_positives = ["autiqu", "outiqu", "eutiqu", "autiqo", "marutiq"]
+                                        found = False
+                                        for fp in false_positives:
+                                            if re.search(fp, code):
+                                                found = True
+                                        if not found and re.search("utiq", code):
                                             url.add(collector)
                                     else:
                                         if re.search(collector.values["name"], code):
@@ -242,10 +250,10 @@ def manage_requests(db, process, domain, request_list, plugin, temp_folder, geo_
             initiator_frame = Connector(db, "url")
             initiator_frame.load(hash_string(elem["originUrl"]))
             initiator_id = initiator_frame.values["id"]
-        domain.add_double(url, plugin, {"third_party": elem["thirdParty"],
-                                        "initiator_frame": initiator_id,
-                                        "insert_date": t,
-                                        "update_timestamp": t})
+        domain.add(url, {"third_party": elem["thirdParty"],
+                         "initiator_frame": initiator_id,
+                         "insert_date": t,
+                         "update_timestamp": t})
 
         ## Automatically label tracking for the url and related resource
         ## Temporarily disabled as it is used onyl for eprivo.eu but not for research purposes
@@ -272,13 +280,10 @@ def insert_link(db, parent_url, link_url):
     return True
 
 
-def parse_internal_links(db, url, webcode, link_dict):
+def parse_internal_links(url, webcode):
     """ Obtains a dictionary with the internal links on the webcode and for each one of them if it has to be scraped or not. """
 
-    # Insert main URL info
-    if url not in link_dict.keys():
-        link_dict[url] = {"linked_by": [], "links_to": [], "parsed": True}
-
+    links = []
     soup = BeautifulSoup(webcode, 'lxml')
     for hyperlink in soup.find_all('a'):
         link = hyperlink.get('href')
@@ -294,19 +299,9 @@ def parse_internal_links(db, url, webcode, link_dict):
         elif link and link[0] != 'h':
             link = url.split(extract_domain(url))[0] + extract_domain(url) + '/' + link
         
-        # Insert link info
-        if link not in link_dict.keys():
-            link_dict[link] = {"linked_by": [url], "links_to": [], "parsed": False}
-        else:
-            link_dict[link]["linked_by"].append(url)
-        link_dict[url]["links_to"].append(link)
+        links.append(link)
 
-        # Skip parsing links already present in the db
-        link_url = Connector(db, "url")
-        if link_url.load(hash_string(link)):
-            link_dict[link]["parsed"] = True
-
-    return link_dict
+    return links
         
 
 def download_url(process, url, filename):
