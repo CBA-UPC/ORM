@@ -298,7 +298,7 @@ def parse_internal_links(url, webcode):
             link = url.split(extract_domain(url))[0] + extract_domain(url) + link
         elif link and link[0] != "h" and 1 < len(link.split("/")[0].split(".")) < 3:
             link = "http://" + link
-        elif link and link[0] != 'h':
+        elif link and link[0:4] != 'http':
             link = url.split(extract_domain(url))[0] + extract_domain(url) + '/' + link
         
         links.append(link)

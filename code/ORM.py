@@ -93,7 +93,6 @@ def main(process):
             status_queue_lock.release()
             domain = Connector(db, "domain")
             domain.load(int(site))
-            logger.info('[Worker %d] URL: %s' % (process, url))
 
             # Launch the crawl
             extra_tries = 3
@@ -283,6 +282,7 @@ if __name__ == '__main__':
                     logger.error("[Main process] Error killing process %d: %s)" % (process_dict[k]["pid"], str(e)))
 
                 # Create new worker and launch it
+                logger.error("[Main Process] Respawning process %d" % int(k))
                 process = Process(target=main, args=[int(k)])
                 process_dict[k] = {"process": process, 
                                    "pid": -1, 

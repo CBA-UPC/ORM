@@ -196,17 +196,20 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     
     # Collect website code and screenshot
     os.makedirs(os.path.join(os.path.abspath("."), temp_folder), exist_ok=True)
-    filename = os.path.join(temp_folder, domain.values["name"] + 'ss.png')
-    driver.save_screenshot(filename)
     webcode = driver.page_source
-    size = os.stat(filename).st_size
     compressed_screenshot = None
-    if not domain.values["screenshot"] and size > 0:
-        # Compress the screenshot to save it into the database when needed
-        with open(filename, 'rb') as f:
-            blob_value = f.read()
-            compressed_screenshot = zlib.compress(blob_value)
-    os.remove(filename)
+    size = 0
+    if not domain.values["screenshot"]:
+        filename = os.path.join(temp_folder, domain.values["name"] + 'ss.png')
+        driver.save_screenshot(filename)
+        if os.path.isfile(os.path.join(temp_folder, domain.values["name"] + 'ss.png')):
+            size = os.stat(filename).st_size
+        if size > 0:
+            # Compress the screenshot to save it into the database when needed
+            with open(filename, 'rb') as f:
+                blob_value = f.read()
+                compressed_screenshot = zlib.compress(blob_value)
+        os.remove(filename)
 
     # Close the browser's URL tab
     try:
