@@ -223,7 +223,7 @@ if __name__ == '__main__':
                 rq += ' WHERE priority = 0 AND update_timestamp < "%s"' % (period.strftime('%Y-%m-%d %H:%M:%S'))
             rq += ' AND id NOT IN (%s)' % ','.join(pending)
             rq += ' AND id > %s' % last_id
-            rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (int(2 * processes))
+            rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (int(0.5 * processes))
             pending = ["0"]
             database = Db()
             results = database.custom(rq)
