@@ -144,7 +144,7 @@ def manage_requests(db, process, domain, request_list, temp_folder, geo_db):
             if not url.save():
                 # Wait until the other thread saves the URL inside the database (or 30s max)
                 seconds = 30
-                while not url.load(elem["hash"]) and seconds > 0:
+                while not url.load(hash_string(elem["url"])) and seconds > 0:
                     seconds -= 1
                     time.sleep(1)
         else:
