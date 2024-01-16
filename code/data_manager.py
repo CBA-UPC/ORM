@@ -78,7 +78,11 @@ def manage_requests(db, process, domain, request_list, temp_folder, geo_db):
                 with open(os.path.join(temp_folder, domain.values["name"] + ".pem"), "bw") as f:
                     f.write(pem_bytes)
                 certificate_json = certificate_to_json(os.path.join(temp_folder, domain.values["name"] + ".pem"))
-                os.remove(os.path.join(temp_folder, domain.values["name"] + ".pem"))
+                try:
+                    os.remove(os.path.join(temp_folder, domain.values["name"] + ".pem"))
+                except Exception:
+                    # In case that other process saved the same certificate at the same time and deleted the file
+                    pass
                 certificate.values["json"] = json.dumps(certificate_json)
                 if not certificate.save():
                     certificate.load(certificate_hash)
