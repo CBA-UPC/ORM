@@ -72,7 +72,7 @@ def main(process):
     while True:
         try:
             queue_lock.acquire()
-            work = work_queue.get(block=True)
+            work = work_queue.get(block=False)
             site = work[0]
             url = work[1]
             deepness = work[2]
