@@ -495,7 +495,7 @@ class Connector(object):
                     affected_tables.append(ct)
             for at in affected_tables:
                 self.db.custom("UPDATE %s SET %s_id = %d WHERE %s_id = %d" % (at, self.table, result[0]["id"], self.table, result[1]["id"]))
-            self.db.custom("DELETE FROM %s WHERE id = %d" % (self.table, result[1]["id"]))
+            self.db.delete(self.table, result[1], self.log)
             #return 0
         self.values = result[0]
         return self.values["id"]
