@@ -181,17 +181,18 @@ if __name__ == '__main__':
     logger.info("Processes to run: %d " % processes)
 
     # Initialize job queue
-    work_queue = Queue()
-    queue_lock = Lock()
-
     status_queue = Queue()
     status_queue_lock = Lock()
-    process_dict = {}
-    dead_processes = []
+
+    # Initialize shared structures
     manager = Manager()
+    work_queue = manager.Queue()
+    queue_lock = Lock()
     url_list = manager.list([])
 
+
     # Create and call the workers
+    process_dict = {}
     logger.debug("[Main process] Spawning new workers...")
     for i in range(processes):
         process =  Process(target=main, args=[i])
