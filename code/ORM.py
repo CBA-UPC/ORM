@@ -213,7 +213,7 @@ if __name__ == '__main__':
         qsize = work_queue.qsize()
         logger.info("[Main process] Queued work %d" % qsize)
         work_queue_lock.release()
-        if qsize < (2 * processes):
+        if qsize < (0.5 * processes):
             logger.debug("[Main process] Getting work")
             now = datetime.now(timezone.utc)
             td = timedelta(-1 * update_threshold)
