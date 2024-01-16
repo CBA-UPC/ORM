@@ -155,7 +155,7 @@ def manage_requests(db, process, domain, request_list, temp_folder, geo_db):
             # I URL has already been found update the timestamp
             url.values["update_timestamp"] = t
             url.save()
-        if "server_ip" in elem.keys():
+        if "server_ip" in elem.keys() and elem["server_ip"]:
             host_domain = clean_subdomain(elem["url"])
             host = Connector(db, "host")
             if not host.load(hash_string(host_domain)):
