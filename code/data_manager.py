@@ -55,7 +55,7 @@ def manage_requests(db, process, domain, request_list, temp_folder, geo_db):
         elem = json.loads(request_list[key])
         if not isinstance(elem, dict) or "requestId" not in elem.keys():
             keys_to_delete.append(key)
-            logger.info("(proc. %s) : URL details not present - %s" % (process, key))
+            logger.info("[Worker %s] : URL details not present - %s" % (process, key))
     for key in keys_to_delete:
         request_list.pop(key)
 
@@ -226,9 +226,9 @@ def manage_requests(db, process, domain, request_list, temp_folder, geo_db):
                                         if re.search(collector.values["name"], code):
                                             url.add(collector)
                         except Exception as e:
-                            logger.error("(proc. %s) Decoding error: %s" % (process, str(e)))
+                            logger.error("[Worker %s] Decoding error: %s" % (process, str(e)))
                     else:
-                        logger.error("(proc. %s) Error #1: Resource not correctly saved - %s" % (process, elem["url"]))
+                        logger.error("[Worker %s] Error #1: Resource not correctly saved - %s" % (process, elem["url"]))
                 if not resource.save():
                     # Wait until the other thread saves the file inside the database (or 30s max)
                     seconds = 30
@@ -317,14 +317,14 @@ def download_url(process, url, filename):
                 requests.packages.urllib3.disable_warnings()
                 f, headers = download_file(url=url, destination=f, verify=False)
             except Exception as e:
-                logger.error("(proc. %s) Error #1: %s" % (process, str(e)))
+                logger.error("[Worker %s] Error #1: %s" % (process, str(e)))
                 return False
         except UnicodeError as e:
-            logger.error("(proc. %s) Error #2: Couldn't download url %s with error %s" % (process, url, str(e)))
+            logger.error("[Worker %s] Error #2: Couldn't download url %s with error %s" % (process, url, str(e)))
             return False
         except Exception as e:
-            logger.error("(proc. %s) Error #3: %s" % (process, str(e)))
+            logger.error("[Worker %s] Error #3: %s" % (process, str(e)))
             return False
-    logger.debug("(proc. %s) Found external resource %s" % (process, url))
+    logger.debug("[Worker %s] Found external resource %s" % (process, url))
     return True
 
