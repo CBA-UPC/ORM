@@ -180,15 +180,12 @@ if __name__ == '__main__':
             processes = available_cpu
     logger.info("Processes to run: %d " % processes)
 
-    # Initialize queues
+    # Initialize shared structures
     manager = Manager()
     work_queue = manager.Queue()
     work_queue_lock = Lock()
     status_queue = manager.Queue()
     status_queue_lock = Lock()
-
-    # Initialize shared url list
-    manager = Manager()
     url_list = manager.list([])
 
     # Create and call the workers
