@@ -494,12 +494,8 @@ class Connector(object):
                 if ct.split("_")[0] == self.table or ct.split("_")[1] == self.table:
                     affected_tables.append(ct)
             for at in affected_tables:
-                print(str(at))
-                print(str(self.table))
-                print(str(result[0]["id"]))
-                print(str(result[1]["id"]))
                 self.db.custom("UPDATE %s SET %s_id = %d WHERE %s_id = %d" % (at, self.table, result[0]["id"], self.table, result[1]["id"]))
-            self.db.custom("DELETE FROM %s WHERE id = %d" % (self.table, result[1].values["id"]))
+            self.db.custom("DELETE FROM %s WHERE id = %d" % (self.table, result[1]["id"]))
             #return 0
         self.values = result[0]
         return self.values["id"]
