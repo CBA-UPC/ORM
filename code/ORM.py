@@ -253,18 +253,20 @@ if __name__ == '__main__':
                 work_queue_lock.release()
             database.close()
 
+        temp_list = []
         # Check the link queue
+        link_queue_lock.acquire()
         while True:
             try:
-                link_queue_lock.acquire()
-                link_work = link_queue.get(block=False)
-                link_queue_lock.release()
-                work_queue_lock.acquire()
-                work_queue.put(link_work)
-                work_queue_lock.release()
+                temp_list.append(link_queue.get(block=False))
             except queue.Empty:
                 break
+        link_queue_lock.release()
 
+        work_queue_lock.acquire()
+        for w in temp_list:
+            work_queue.put(w)
+        work_queue_lock.release()
         
         # Check the processes status
         status_queue_lock.acquire()
