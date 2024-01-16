@@ -26,7 +26,7 @@ import logging.config
 import queue
 import signal
 from datetime import datetime, timezone, timedelta
-from multiprocessing import Process, Pool, Queue, cpu_count, Lock, Manager
+from multiprocessing import Process, Pool, Manager, cpu_count, Lock, Manager
 
 # Own modules
 from db_manager import Db, Connector
@@ -106,14 +106,14 @@ def main(process):
                 if parent:
                     insert_link(db, parent, url)
                 if len(links) > 0 and max_deep > deepness:
-                    link_queue_lock.acquire()
+                    work_queue_lock.acquire()
                     for link in links:
                         if link not in url_list:
                             link_url = Connector(db, "url")
                             if not link_url.load(hash_string(link)):
                                 url_list.append(link)
-                                link_queue.put([site, link, deepness + 1, url])
-                    link_queue_lock.release()
+                                work_queue.put([site, link, deepness + 1, url])
+                    work_queue_lock.release()
             try:
                 url_list.remove(url)
             except Exception as e:
@@ -181,12 +181,11 @@ if __name__ == '__main__':
     logger.info("Processes to run: %d " % processes)
 
     # Initialize queues
-    work_queue = Queue()
+    manager = Manager()
+    work_queue = manager.Queue()
     work_queue_lock = Lock()
-    status_queue = Queue()
+    status_queue = manager.Queue()
     status_queue_lock = Lock()
-    link_queue = Queue()
-    link_queue_lock = Lock()
 
     # Initialize shared url list
     manager = Manager()
@@ -213,7 +212,7 @@ if __name__ == '__main__':
         qsize = work_queue.qsize()
         logger.info("[Main process] Queued work %d" % qsize)
         work_queue_lock.release()
-        if qsize < (0.5 * processes):
+        if qsize < (2 * processes):
             logger.debug("[Main process] Getting work")
             now = datetime.now(timezone.utc)
             td = timedelta(-1 * update_threshold)
@@ -252,21 +251,6 @@ if __name__ == '__main__':
                     last_id = int(result["id"])
                 work_queue_lock.release()
             database.close()
-
-        temp_list = []
-        # Check the link queue
-        link_queue_lock.acquire()
-        while True:
-            try:
-                temp_list.append(link_queue.get(block=False))
-            except queue.Empty:
-                break
-        link_queue_lock.release()
-
-        work_queue_lock.acquire()
-        for w in temp_list:
-            work_queue.put(w)
-        work_queue_lock.release()
         
         # Check the processes status
         status_queue_lock.acquire()
