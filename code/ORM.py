@@ -26,7 +26,7 @@ import logging.config
 import queue
 import signal
 from datetime import datetime, timezone, timedelta
-from multiprocessing import Process, Pool, Manager, cpu_count, Lock, Manager
+from multiprocessing import Process, Pool, Queue, cpu_count, Lock, Manager
 
 # Own modules
 from db_manager import Db, Connector
@@ -71,15 +71,15 @@ def main(process):
 
     while True:
         try:
-            work_queue_lock.acquire()
+            queue_lock.acquire()
             work = work_queue.get(block=True)
             site = work[0]
             url = work[1]
             deepness = work[2]
             parent = work[3]
-            work_queue_lock.release()
+            queue_lock.release()
         except queue.Empty:
-            work_queue_lock.release()
+            queue_lock.release()
             status_queue_lock.acquire()
             my_dict = driver.capabilities 
             status_queue.put([str(process), "", os.getpid(), driver.service.process.pid, my_dict['moz:processID'], datetime.now()])
@@ -106,14 +106,14 @@ def main(process):
                 if parent:
                     insert_link(db, parent, url)
                 if len(links) > 0 and max_deep > deepness:
-                    work_queue_lock.acquire()
+                    queue_lock.acquire()
                     for link in links:
                         if link not in url_list:
                             link_url = Connector(db, "url")
                             if not link_url.load(hash_string(link)):
                                 url_list.append(link)
                                 work_queue.put([site, link, deepness + 1, url])
-                    work_queue_lock.release()
+                    queue_lock.release()
             try:
                 url_list.remove(url)
             except Exception as e:
@@ -180,17 +180,19 @@ if __name__ == '__main__':
             processes = available_cpu
     logger.info("Processes to run: %d " % processes)
 
-    # Initialize shared structures
-    manager = Manager()
-    work_queue = manager.Queue()
-    work_queue_lock = Lock()
-    status_queue = manager.Queue()
+    # Initialize job queue
+    work_queue = Queue()
+    queue_lock = Lock()
+
+    status_queue = Queue()
     status_queue_lock = Lock()
+    process_dict = {}
+    dead_processes = []
+    manager = Manager()
     url_list = manager.list([])
 
     # Create and call the workers
     logger.debug("[Main process] Spawning new workers...")
-    process_dict = {}
     for i in range(processes):
         process =  Process(target=main, args=[i])
         process_dict[str(i)] = {"process": process, 
@@ -205,10 +207,10 @@ if __name__ == '__main__':
     last_id = args.start
     while True:
         # Insert new work into queue if needed.
-        work_queue_lock.acquire()
+        queue_lock.acquire()
         qsize = work_queue.qsize()
         logger.info("[Main process] Queued work %d" % qsize)
-        work_queue_lock.release()
+        queue_lock.release()
         if qsize < (2 * processes):
             logger.debug("[Main process] Getting work")
             now = datetime.now(timezone.utc)
@@ -229,7 +231,7 @@ if __name__ == '__main__':
             if len(results) > 0:
                 # Initialize job queue
                 logger.debug("[Main process] Enqueuing work")
-                work_queue_lock.acquire()
+                queue_lock.acquire()
                 for result in results:
                     if clean:
                         # Clean the domain info before crawling new info
@@ -246,7 +248,7 @@ if __name__ == '__main__':
                     work_queue.put([result["id"], url, 0, None])
                     pending.append(str(result["id"]))
                     last_id = int(result["id"])
-                work_queue_lock.release()
+                queue_lock.release()
             database.close()
         
         # Check the processes status
