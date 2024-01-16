@@ -293,6 +293,7 @@ if __name__ == '__main__':
                 logger.error("[Main Process] Respawning process %d" % int(k))
                 process = Process(target=main, args=[int(k)])
                 process_dict[k] = {"process": process, 
+                                   "url": "",
                                    "pid": -1, 
                                    "geckodriver_pid": -1, 
                                    "browser_pid": -1, 
