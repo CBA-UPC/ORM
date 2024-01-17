@@ -204,21 +204,21 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
-        return driver, FAILED, NO_REPEAT, links
+        return driver, FAILED, REPEAT, links
     except WebDriverException as e:
         logger.warning("WebDriverException (3) on %s / Error: %s [Worker %d]" % (domain.values["name"], str(e), process))
         driver = reset_browser(driver, process, cache, update_ublock)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
-        return driver, FAILED, NO_REPEAT, links
+        return driver, FAILED, REPEAT, links
     except Exception as e:
         logger.error("%s [Worker %d]" % (str(e), process))
         driver = reset_browser(driver, process, cache, update_ublock)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
-        return driver, FAILED, NO_REPEAT, links
+        return driver, FAILED, REPEAT, links
 
     compressed_screenshot = None
     size = 0
