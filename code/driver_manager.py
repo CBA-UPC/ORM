@@ -32,7 +32,6 @@ from selenium.common.exceptions import NoSuchWindowException, InvalidArgumentExc
 from selenium.webdriver.common.alert import Alert
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
-import validators
 
 # Own modules
 from utils import utc_now, extract_domain
