@@ -296,7 +296,7 @@ def parse_internal_links(url, webcode):
         
         # We cut on \# characters to avoid also multiple urls with anchors for the same website
         link = link.split("#")[0]
-        while link and link[0] != " ":
+        while link and link[0] == " ":
             link = link[1:]
         
         # If it is a malformed link try to fix it by adding the hosting domain
