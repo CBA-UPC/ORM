@@ -23,6 +23,8 @@ The following packages are required:
 * python-dateutil>=2.8.1
 * setproctitle>=1.2.2
 * urllib3==1.26.6
+* pyvirtualdisplay>=3.0
+* validators>=0.20.0
 
 You can install them using *pip install -r requirements.txt* from the downloaded folder. To compile some of the modules you will need the python-dev library corresponding to you Python version.
 
