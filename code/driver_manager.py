@@ -32,12 +32,23 @@ from selenium.common.exceptions import NoSuchWindowException, InvalidArgumentExc
 from selenium.webdriver.common.alert import Alert
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
+from selenium.webdriver.firefox.service import Service # Used to define geckodriver bin + log_path in selenium 4.16
 
 # Own modules
 from utils import utc_now, extract_domain
 from db_manager import Db, Connector
 from data_manager import manage_requests, parse_internal_links, insert_link
 from session_storage import SessionStorage
+
+
+# Paths to be used in production server
+geckodriver_path = os.path.join(os.path.abspath("."), "../assets/firefox/geckodriver-v0.33.0-linux64/geckodriver")
+firefox_path     = os.path.join(os.path.abspath("."), "../assets/firefox/firefox-115.5.0esr/firefox/firefox")
+
+# Hardcoded paths for the virtual machine
+# geckodriver_path = "/home/eprivo/Desktop/geckodriver-v0.33.0-linux64/geckodriver"
+# firefox_path     = "/home/eprivo/Desktop/firefox-115.5.0esr/firefox/firefox"
+
 
 COMPLETED = REPEAT = True
 FAILED = NO_REPEAT = False
@@ -82,7 +93,14 @@ def build_driver(cache, update_ublock, process):
 
         opts = Options()
         opts.profile = profile
-        driver = webdriver.Firefox(options=opts, log_path="log/geckodriver.log")
+        opts.binary_location = firefox_path
+        
+        geckodriver_service = Service(executable_path=geckodriver_path,
+                                      log_path="log/geckodriver.log")
+        
+        driver = webdriver.Firefox(service=geckodriver_service,
+                                   options=opts)
+        
         driver.set_page_load_timeout(15)
     except Exception as e:
         # logger.error(e)
@@ -172,7 +190,15 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
             driver = reset_browser(driver, process, cache, update_ublock)
         return driver, FAILED, REPEAT, links
     except WebDriverException as e:
-        logger.warning("WebDriverException (2) on %s / Error: %s [Worker %d]" % (domain.values["name"], str(e), process))
+        # Remove Stacktrace for readability -- Most of the time this error is launched when visiting
+        # a domain with no webpage associated -- The old log message should be used in production
+        stacktrace_start = str(e).find("Stacktrace:")
+        if stacktrace_start != -1:
+            error_str = str(e)[:stacktrace_start].replace('\n','')
+        else:
+            error_str = str(e)
+        logger.warning("WebDriverException (2) on %s / Error: %s (proc. %d)" % (domain.values["name"], error_str, process))
+
         driver = reset_browser(driver, process, cache, update_ublock)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0

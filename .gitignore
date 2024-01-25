@@ -3,3 +3,7 @@ code/__pycache__
 code/log
 code/tmp
 code/config.py
+code/mouse_code/__pycache__
+
+assets/firefox/firefox-115.5.0esr/
+assets/firefox/geckodriver-v0.33.0-linux64/

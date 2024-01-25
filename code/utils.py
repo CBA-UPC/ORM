@@ -69,12 +69,14 @@ def extract_domain(url):
 
 
 def clean_subdomain(url):
-    """ Extracts the base domain (without subdomain) from the URL. """
+    """ Extracts the base domain (without subdomain) from the URL.
+        Updated: compatible with tldextract v4.0.0 && tldextract v5.1.1
+    """
 
     extracted_domain = tldextract.extract(url)
-    domain = extracted_domain[1]
-    if extracted_domain[2]:
-        domain = domain + "." + extracted_domain[2]
+    domain = extracted_domain.domain
+    if extracted_domain.suffix:
+        domain += '.' + extracted_domain.suffix
     return domain
 
 

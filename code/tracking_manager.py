@@ -19,14 +19,11 @@ from setproctitle import setproctitle
 # Own modules
 from db_manager import Db, Connector
 from utils import hash_string, utc_now, extract_domain
+from mouse_tracking import check_mouse_tracking
 
 logging.config.fileConfig('logging.conf')
 
 logger = logging.getLogger("TRACKING_MANAGER")
-
-mouseEvents = ["scroll", "drag", "dragend", "dragstart", "dragleave", "dragover", "drop",
-               "mozInputSource", "buttons", "movementX", "movementY", "mozPressure", "pressure",
-               "deltaX", "deltaY", "deltaZ", "deltaWheel"]
 
 current_timestamp = datetime.now(timezone(timedelta(hours=2), name="UTC+2"))
 
@@ -400,197 +397,7 @@ def get_canvas_fingerprinting(url):
     return canvas1, canvas2
 
 
-def find_end(javascript_file, a, ini_label, end_label):
-    """ Auxiliary function to find the end position of the code piece. """
-
-    with open(javascript_file) as f:
-        f.seek(a)
-        nothing = 0
-        while f.read(1) != ini_label:
-            nothing += 1
-            if nothing == 100:
-                return 0
-        val = 0
-        end = False
-        while not end:
-            curr = f.read(1)
-            if curr == ini_label:
-                val += 1
-            elif curr == end_label or len(curr) < 1:
-                if val == 0:
-                    end = True
-                    pos = f.tell()
-                else:
-                    val -= 1
-    return pos
-
-
-def ret_post(javascript_file, ini, end):
-    """ Auxiliary function to find the mouse tracking returning point. """
-    with open(javascript_file) as f:
-        s = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-        for tag in ['post', 'postMessage', 'sendMessage', 'ym']:
-            ba = bytearray()
-            ba.extend(map(ord, tag))
-            try:
-                if s.find(ba, ini, end) != -1:
-                    return True
-            except OverflowError as err:
-                logger.info("File too large")
-
-
-def parse_mouse_fingerprinting(javascript_file):
-    done = False
-    with open(javascript_file) as f:
-        try:
-            html = f.read(len("<!DOCTYPE html>"))
-            f.seek(0)
-            if "<!" in html or "docty" in html:
-                return False
-        except UnicodeDecodeError as e:
-            logger.info("Probably not an UTF-8 file")
-            return False
-        f.seek(0)
-        s = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-        for event in mouseEvents:
-            b = bytearray()
-            c = bytearray()
-            d = bytearray()
-            e = bytearray()
-            find = 'addEventListener("' + event + '"'
-            find1 = 'on' + event
-            find2 = 'ga('
-            find3 = 'logEvent'
-            b.extend(map(ord, find))
-            c.extend(map(ord, find1))
-            d.extend(map(ord, find2))
-            e.extend(map(ord, find3))
-            try:
-                org_point = s.find(b)
-                org_point1 = s.find(c)
-                org_point2 = s.find(d)
-                org_point3 = s.find(e)
-            except OverflowError as err:
-                logger.info("File too large")
-            if org_point != -1:
-                org_point = f.seek(org_point + len(find))
-                f.read(1)
-                a = f.tell()
-                if f.read(1) != " ":
-                    f.seek(a)
-                a = f.tell()
-                if f.read(1) != "(":
-                    f.seek(a)
-                name = ""
-                if f.read(len("function(")) == "function(":
-                    point = f.tell()
-                    pos = find_end(javascript_file, f.tell(), '{', '}')
-                    done = done or ret_post(javascript_file, point, pos)
-                else:
-                    f.seek(org_point)
-                    f.read(1)
-                    curr = f.read(1)
-                    while curr != "," and curr != '(' and curr != ";":
-                        if curr == '.':
-                            name = ""
-                        elif curr != ' ':
-                            name += curr
-                        curr = f.read(1)
-                    if "fireAnalytics" in name:
-                        return True, 0
-                    b = bytearray()
-                    find = "function " + name
-                    b.extend(map(ord, find))
-                    try:
-                        point = s.rfind(b)
-                    except OverflowError as err:
-                        logger.info("File too large")
-                    if point != -1:
-                        point = f.seek(point + len(find))
-                        pos = find_end(javascript_file, point, "{", "}")
-                        f.seek(pos)
-                        done = done or ret_post(javascript_file,point,pos)
-            if not done and org_point1 != -1:
-                org_point1 = f.seek(org_point1 + len(find1))
-                if f.read(1) != " ":
-                    f.seek(org_point1)
-                aux = f.read(1)
-                if aux == "=":
-                    pos_aux = f.tell()
-                    if f.read(1) != " ":
-                        f.seek(pos_aux)
-                    a = f.tell()
-                    if f.read(1) != "(":
-                        f.seek(a)
-                    if f.read(len("function(")) == "function(":
-                        pos = find_end(javascript_file, pos_aux, "{", "}")
-                        done = done or ret_post(javascript_file, pos_aux, pos)
-                    else:
-                        f.seek(pos_aux)
-                        if f.read(1) == "\"":
-                            while f.read(1) != "\"":
-                                nothing = 0
-                            pos = f.tell()
-                            done = done or ret_post(javascript_file, pos_aux, pos)
-                        else:
-                            f.seek(pos_aux)
-                            curr = f.read(1)
-                            name = curr
-                            while curr != "," and curr != '(' and curr != ";":
-                                if curr == '.':
-                                    name = ""
-                                elif curr != ' ':
-                                    name += curr
-                                curr = f.read(1)
-                            c = bytearray()
-                            find1 = "function " + name
-                            c.extend(map(ord, find))
-                            try:
-                                point = s.rfind(c)
-                            except OverflowError as err:
-                                logger.info("File too large")
-                            if point != -1:
-                                point = f.seek(point + len(find))
-                                pos = find_end(javascript_file, point, "{", "}")
-                                done = done or ret_post(javascript_file, point, pos)
-                elif aux == "(":
-                    pos = find_end(javascript_file, org_point1, "{", "}")
-                    done = done or ret_post(javascript_file, org_point1, pos)
-            if not done and org_point2 != -1:
-                point = f.seek(org_point2 + len(find2)-1)
-                pos = find_end(javascript_file, point, "(", ")")
-                f.seek(pos)
-                d = bytearray()
-                d.extend(map(ord, event))
-                try:
-                    ret = s.find(d, point, pos)
-                except OverflowError as err:
-                    logger.info("File too large")
-                if ret != -1:
-                    return True
-                d = bytearray()
-                d.extend(map(ord, 'on' + event))
-                try:
-                    ret = s.find(d, point, pos)
-                except OverflowError as err:
-                    logger.info("File too large")
-                if ret != -1:
-                    return True
-            if not done and org_point3 != -1:
-                point = f.seek(org_point2 + len(find3))
-                pos = find_end(javascript_file, point, "(", ")")
-                f.seek(pos)
-                d = bytearray()
-                d.extend(map(ord, event))
-                try:
-                    ret = s.find(d, point, pos)
-                except OverflowError as err:
-                    logger.info("File too large")
-                if ret != -1:
-                    return True
-
-
-def get_mouse_fingerprinting(url):
+def get_mouse_fingerprinting(url, domain):
     # Get url info
     db = url.db
 
@@ -604,22 +411,23 @@ def get_mouse_fingerprinting(url):
     trackings = url.get("tracking", order="tracking_id")
 
     for t in trackings:
-        
         if t.values["id"] == tracking.values["id"]:
             url_tracking = 1
-    """if url.get("tracking", {"tracking_id": tracking.values["id"]}):
-        url_tracking = 1"""
 
     # If not in database compare to mouse tracking domains
+    '''
     if not url_tracking:
         mouse_tracking_domains = Connector(db, "mouse_tracking_domains")
         mouse_tracking_domains = mouse_tracking_domains.get_all()
         for domain in mouse_tracking_domains:
-            if re.search(domain, url.values["url"]):
+            # if re.search(domain["name"], url.values["url"]):
+            match_start = str(url.values["url"]).find(domain["name"])
+            if match_start != -1:
                 url.add(tracking, {"update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
                 url_tracking = 1
                 url.values["blocked"] = 1
                 url.save()
+    '''
 
     # Finish if resource does not exist
     if not url.values["resource_id"]:
@@ -632,39 +440,26 @@ def get_mouse_fingerprinting(url):
         return url_tracking, 0
 
     # Finish if the file is not a JS script
-    if resource.values["type"] != "script":
-        return url_tracking, 0
-          
+    # TODO: Check why type is always NULL in the DB
+    #if resource.values["type"] != "script":
+    #    return url_tracking, 0
+
     # Return DB value if already computed
     tracking_list = resource.get("tracking", order="tracking_id")
     for tr in tracking_list:
         if tr.values["id"] == tracking.values["id"]:
             return url_tracking, 1
 
-    # Return here as the code above fails and hangs the browser
-    return url_tracking, 0
+    # Analyze resource
+    tracker = check_mouse_tracking(url, domain)
 
-    # TODO: Replace above bad functioning code with new alternative
-    # Otherwise extract file and compute
     resource_tracking = 0
-    code = zlib.decompress(resource.values["file"])
-    tmp_filename = os.path.join(os.path.abspath("."), "tmp", url.values["hash"] + ".js")
-    with open(tmp_filename, "wb") as js_file:
-        js_file.write(code)
-    try:
-        tracker = parse_mouse_fingerprinting(tmp_filename)
-    except UnicodeDecodeError as e:
-        # Probably not an UTF-8 file
-        pass
-    except Exception as e:
-        logger.info("Mouse tracking error %s" % str(e))
-    else:
-        if tracker:
-            #resource.add(tracking)
-            resource_tracking = 1
-            resource.add(tracking, {"quantity": resource_tracking, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
-            url.add(tracking, {"quantity": resource_tracking, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
-    os.remove(tmp_filename)
+    if tracker:
+         #resource.add(tracking)
+         resource_tracking = 1
+         resource.add(tracking, {"quantity": resource_tracking, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+         url.add(tracking, {"quantity": resource_tracking, "update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
+
     return url_tracking, resource_tracking
 
 def get_webgl_fingerprint(url):
@@ -754,10 +549,10 @@ def check_tracking(url, domain):
     get_font_fingerprinting(url)
     logger.info("Looking URL %s for canvas fingerprinting" % url.values["url"])
     get_canvas_fingerprinting(url)
-    logger.info("Looking URL %s for mouse fingerprinting" % url.values["url"])
-    get_mouse_fingerprinting(url)
     logger.info("Looking URL %s for WebGL fingerprinting" % url.values["url"])
     get_webgl_fingerprint(url)
+    logger.info("Looking URL %s for mouse fingerprinting" % url.values["url"])
+    get_mouse_fingerprinting(url, domain)
 
 
 def main(process):
