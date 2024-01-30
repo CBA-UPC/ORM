@@ -457,19 +457,17 @@ def get_mouse_fingerprinting(url, domain):
             url_tracking = 1
 
     # If not in database compare to mouse tracking domains
-    '''
     if not url_tracking:
         mouse_tracking_domains = Connector(db, "mouse_tracking_domains")
         mouse_tracking_domains = mouse_tracking_domains.get_all()
         for domain in mouse_tracking_domains:
-            # if re.search(domain["name"], url.values["url"]):
-            match_start = str(url.values["url"]).find(domain["name"])
+            # if re.search(domain.values["name"], url.values["url"]):
+            match_start = str(url.values["url"]).find(domain.values["name"])
             if match_start != -1:
                 url.add(tracking, {"update_timestamp": datetime.now(timezone(timedelta(hours=2), name="UTC+2"))})
                 url_tracking = 1
                 url.values["blocked"] = 1
                 url.save()
-    '''
 
     # Finish if resource does not exist
     if not url.values["resource_id"]:
