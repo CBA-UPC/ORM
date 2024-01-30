@@ -212,10 +212,9 @@ if __name__ == '__main__':
         work_queue_lock.release()
         if qsize < (2 * processes):
             logger.debug("[Main process] Getting work")
-            # now = datetime.now(timezone.utc)
-            # td = timedelta(-1 * update_threshold)
-            # period = now + td
-            period = datetime.now()
+            now = datetime.now(timezone.utc)
+            td = timedelta(-1 * update_threshold)
+            period = now + td
             rq = 'SELECT id, name FROM domain'
             if args.priority:
                 rq += ' WHERE priority = 1'
