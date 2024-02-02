@@ -409,12 +409,12 @@ def check_mouse_tracking(url, domain):
         code = zlib.decompress(resource.values["file"])
         success, result = parser.parse(code.decode('utf-8'), False)
         if not success:
-            logger.info("Mouse tracking parser error for %s: %s" % (url.values["hash"], result))
+            logger.debug("Mouse tracking parser error for %s: %s" % (url.values["hash"], result))
             return False
         contents, nodes = result
         success, result = analyzer.analyze(contents, nodes, False)
         if not success:
-            logger.info("Mouse tracking analyzer error for %s: %s" % (url.values["hash"], result))
+            logger.debug("Mouse tracking analyzer error for %s: %s" % (url.values["hash"], result))
             return False
 
         if len(result) != 0:
@@ -433,7 +433,7 @@ def check_mouse_tracking(url, domain):
         return False
 
     except Exception as e:
-        logger.info("Mouse tracking exception for %s: %s" % (url.values["hash"], str(e)))
+        logger.debug("Mouse tracking exception for %s: %s" % (url.values["hash"], str(e)))
         return False
 
     return False
@@ -581,17 +581,17 @@ def get_webgl_fingerprint(url):
 
 def check_tracking(url, domain):
     """ Checks all the possible tracking for the given url and domain. """
-    logger.info("Looking URL %s for HTTP cookies" % url.values["url"])
+    logger.debug("Looking URL %s for HTTP cookies" % url.values["url"])
     get_http_cookies(url, domain)
-    logger.info("Looking URL %s for JS cookies" % url.values["url"])
+    logger.debug("Looking URL %s for JS cookies" % url.values["url"])
     get_js_cookies(url)
-    logger.info("Looking URL %s for font fingerprinting" % url.values["url"])
+    logger.debug("Looking URL %s for font fingerprinting" % url.values["url"])
     get_font_fingerprinting(url)
-    logger.info("Looking URL %s for canvas fingerprinting" % url.values["url"])
+    logger.debug("Looking URL %s for canvas fingerprinting" % url.values["url"])
     get_canvas_fingerprinting(url)
-    logger.info("Looking URL %s for WebGL fingerprinting" % url.values["url"])
+    logger.debug("Looking URL %s for WebGL fingerprinting" % url.values["url"])
     get_webgl_fingerprint(url)
-    logger.info("Looking URL %s for mouse fingerprinting" % url.values["url"])
+    logger.debug("Looking URL %s for mouse fingerprinting" % url.values["url"])
     get_mouse_fingerprinting(url, domain)
 
 
