@@ -461,9 +461,9 @@ if __name__ == '__main__':
 
     # Create and call the workers
     logger.debug("[Main process] Spawning new workers...")
-    with Pool(processes=int(threads/3) * 2) as pool, Pool(processes=int(threads/3)) as data_pool:
-        dp = data_pool.map_async(db_work, [i for i in range(int(threads/3))])
-        p = pool.map_async(work, [i for i in range(int(threads/3) * 2)])
+    with Pool(processes=int(threads/2)) as pool, Pool(processes=int(threads/2)) as data_pool:
+        dp = data_pool.map_async(db_work, [i for i in range(int(threads/2))])
+        p = pool.map_async(work, [i for i in range(int(threads/2))])
 
         # Restore signal on main thread
         signal.signal(signal.SIGINT, original_sigint_handler)
