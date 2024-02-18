@@ -4,7 +4,6 @@ geoip2>=4.8.0
 jsbeautifier>=1.14.11
 lxml>=4.9.3
 mysqlclient>=2.2.0
-pyrabin>=0.6
 requests>=2.31.0
 asn1crypto>=1.5.1
 esprima>=4.0.1
