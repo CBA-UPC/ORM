@@ -35,7 +35,7 @@ def print_remaining(last_ts, sec, msg):
         result_queue_lock.release()
         sec += int(dif)
         print("", end='\r', flush=True)
-        print('[%s] %s | Work queue size: %05d | Codeset queue size: %05d' % (utc_now(), msg, work_size, result_size), end='', flush=True)
+        print('[%s] %s | Work queue size: %05d | AST queue size: %05d' % (utc_now(), msg, work_size, result_size), end='', flush=True)
         return now, sec
     return last_ts, sec
 
@@ -226,7 +226,7 @@ def traverse(node, ast_data):
 
 
 def extract_scripts(code, ast_data, worker_number):
-    """ Extract the embedded scripts and calls the function to compute the codesets. """
+    """ Extract the embedded scripts and calls the function to compute the asts. """
 
     try:
         soup = BeautifulSoup(code, 'lxml')
@@ -238,7 +238,7 @@ def extract_scripts(code, ast_data, worker_number):
 
 
 def extract_ast(code, ast_data, worker_number):
-    """ Computes the codesets for the given code. """
+    """ Computes the asts for the given code. """
 
     try:
         logger.debug('[Worker %d] Trying leaf 1' % worker_number)
@@ -282,17 +282,17 @@ def enqueue_result(obj):
             enqueued = True
 
 
-def compute_codesets(resource, ast_data, worker_number):
-    """ Inserts the  resource codesets inside the database. """
+def compute_asts(resource, ast_data, worker_number):
+    """ Inserts the  resource asts inside the database. """
 
     logger.debug("[Worker %d] AST subtrees: %d" % (worker_number, len(ast_data["subtrees"])))
     for j in range(len(ast_data["subtrees"])):
         logger.debug("[Worker %d] Creating subtree %d" % (worker_number, j))
         hash_value = hash_string(ast_data["subtrees"][j])
         logger.debug("[Worker %d] Hash %s" % (worker_number, hash_value))
-        codeset = {"hash": hash_value,
-                   "tree_nodes": int(len(ast_data["subtrees"][j]) / 3)}
-        enqueue_result({"codeset": codeset, "resource_id": resource["id"],
+        ast = {"hash": hash_value,
+               "tree_nodes": int(len(ast_data["subtrees"][j]) / 3)}
+        enqueue_result({"ast": ast, "resource_id": resource["id"],
                         "offset": ast_data["offset"][j], "length": ast_data["length"][j]})
         logger.debug("[Worker %d] Subtree %d created" % (worker_number, j))
 
@@ -303,7 +303,7 @@ parser.add_argument('-t', dest='threads', type=int, default=0,
 parser.add_argument('-start', dest='start', type=int, default=0, help='Start index (Default: First)')
 parser.add_argument('-end', dest='end', type=int, default=-1, help='End index (Default: Last)', nargs='?')
 parser.add_argument('-f', dest='input_file', type=str, default="",
-                    help='File containing a list of resource ids to codeset (Default: NULL)')
+                    help='File containing a list of resource ids to ast (Default: NULL)')
 parser.add_argument('-v', dest='verbose', type=int, default=3,
                     help='Verbose: 0=CRITICAL; 1=ERROR; 2=WARNING; 3=INFO; 4=DEBUG (Default: WARNING)')
 
@@ -345,36 +345,36 @@ def db_work(process_number):
         resource = Connector(db, "resource")
         for item in item_list:
             try:
-                # Load the resource if different and mark it as already parsed for codesets
+                # Load the resource if different and mark it as already parsed for asts
                 if "id" not in resource.values.keys() or resource.values["id"] != item["resource_id"]:
                     resource.load(item["resource_id"])
                     resource.values["split"] = 1
-                    if item["codeset"] is None:
+                    if item["ast"] is None:
                         resource.values["split"] = 2
                     if not resource.save():
                         resource.load(item["resource_id"])
                 setproctitle("ORM - Data parser process %d - Resource %d" % (process_number, resource.values["id"]))
             except Exception as error:
-                logger.critical("[DB Worker %d] Crashed #1. Codeset: %s | Error: %s" % (process_number, str(item), str(error)))
+                logger.critical("[DB Worker %d] Crashed #1. AST: %s | Error: %s" % (process_number, str(item), str(error)))
             try:
-                if item["codeset"] is not None:
-                    # Load the codeset and save it if non-existent
-                    codeset = Connector(db, "codeset")
-                    if not codeset.load(item["codeset"]["hash"]):
-                        codeset.values.pop("dirt_level")
-                        codeset.values.pop("popularity_level")
-                        codeset.values["tree_nodes"] = item["codeset"]["tree_nodes"]
-                        codeset.values["resources"] = int(codeset.values["resources"]) + 1
+                if item["ast"] is not None:
+                    # Load the ast and save it if non-existent
+                    ast = Connector(db, "ast")
+                    if not ast.load(item["ast"]["hash"]):
+                        ast.values.pop("dirt_level")
+                        ast.values.pop("popularity_level")
+                        ast.values["tree_nodes"] = item["ast"]["tree_nodes"]
+                        ast.values["resources"] = int(ast.values["resources"]) + 1
                         if resource.values["is_tracking"]:
-                            codeset.values["tracking_resources"] = int(codeset.values["tracking_resources"]) + 1
-                        while not codeset.save():
-                            codeset.load(item["codeset"]["hash"])
-                            codeset.values.pop("dirt_level")
-                            codeset.values.pop("popularity_level")
-                            codeset.values["tracking_resources"] = int(codeset.values["tracking_resources"]) + 1
-                    resource.add(codeset, {"offset": item["offset"], "length": item["length"]})
+                            ast.values["tracking_resources"] = int(ast.values["tracking_resources"]) + 1
+                        while not ast.save():
+                            ast.load(item["ast"]["hash"])
+                            ast.values.pop("dirt_level")
+                            ast.values.pop("popularity_level")
+                            ast.values["tracking_resources"] = int(ast.values["tracking_resources"]) + 1
+                    resource.add(ast, {"offset": item["offset"], "length": item["length"]})
             except Exception as error:
-                logger.critical("[DB Worker %d] Crashed #2. Codeset: %s | Error: %s" % (process_number, str(item), str(error)))
+                logger.critical("[DB Worker %d] Crashed #2. AST: %s | Error: %s" % (process_number, str(item), str(error)))
     db.close()
     child_pipe.send("Finished")
     return
@@ -407,15 +407,15 @@ def work(process_number):
                 if not extract_scripts(code, ast_data, process_number):
                     if not extract_ast(code, ast_data, process_number):
                         logger.warning('[Worker %d] Could not compute AST for %d' % (process_number, resource_data["id"]))
-                        enqueue_result({"codeset": None, "resource_id": resource_data["id"]})
+                        enqueue_result({"ast": None, "resource_id": resource_data["id"]})
                         continue
             elif resource_data["type"] == "script":
                 if not extract_ast(code, ast_data, process_number):
                     if not extract_scripts(code, ast_data, process_number):
                         logger.warning('[Worker %d] Could not compute AST for %d' % (process_number, resource_data["id"]))
-                        enqueue_result({"codeset": None, "resource_id": resource_data["id"]})
+                        enqueue_result({"ast": None, "resource_id": resource_data["id"]})
                         continue
-            compute_codesets(resource_data, ast_data, process_number)
+            compute_asts(resource_data, ast_data, process_number)
 
 
 if __name__ == '__main__':
