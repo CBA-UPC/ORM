@@ -262,7 +262,7 @@ def manage_requests(db, process, domain, request_list, temp_folder, geo_db):
         ## Automatically label tracking for the url and related resource
         ## Temporarily disabled as it is used onyl for eprivo.eu but not for research purposes
         ## Uncomment next line to enable it
-        check_tracking(url, domain)
+        #check_tracking(url, domain)
     domain.save()
 
 

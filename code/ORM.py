@@ -21,6 +21,7 @@
 # Basic modules
 import argparse
 import os
+import re
 import time
 import logging.config
 import queue
@@ -72,25 +73,26 @@ def main(process):
     while True:
         try:
             work_queue_lock.acquire()
-            work = work_queue.get(block=False)
+            work = work_queue.pop()
             site = work[0]
             url = work[1]
             deepness = work[2]
             parent = work[3]
             work_queue_lock.release()
-        except queue.Empty:
-            work_queue_lock.release()
-            status_queue_lock.acquire()
-            my_dict = driver.capabilities 
-            status_queue.put([str(process), "", os.getpid(), driver.service.process.pid, my_dict['moz:processID'], datetime.now()])
-            status_queue_lock.release()
-            time.sleep(10)
         except Exception as e:
-            logger.error("[Worker %d] %s" % (process, str(e)))
+            if re.search("empty", str(e)):
+                work_queue_lock.release()
+                my_dict = driver.capabilities 
+                status_queue_lock.acquire()
+                status_queue.append([str(process), "", os.getpid(), driver.service.process.pid, my_dict['moz:processID'], datetime.now()])
+                status_queue_lock.release()
+                time.sleep(10)
+            else:
+                logger.error("[Worker %d] %s" % (process, str(e)))
         else:
-            status_queue_lock.acquire()
             my_dict = driver.capabilities 
-            status_queue.put([str(process), url, os.getpid(), driver.service.process.pid, my_dict['moz:processID'], datetime.now()])
+            status_queue_lock.acquire()
+            status_queue.append([str(process), url, os.getpid(), driver.service.process.pid, my_dict['moz:processID'], datetime.now()])
             status_queue_lock.release()
             domain = Connector(db, "domain")
             domain.load(int(site))
@@ -106,18 +108,22 @@ def main(process):
                 if parent:
                     insert_link(db, parent, url)
                 if len(links) > 0 and max_deep > deepness:
-                    work_queue_lock.acquire()
                     for link in links:
-                        if link not in url_list:
-                            link_url = Connector(db, "url")
-                            if not link_url.load(hash_string(link)):
+                        link_url = Connector(db, "url")
+                        if not link_url.load(hash_string(link)):
+                            url_list_lock.acquire()
+                            if link not in url_list:
                                 url_list.append(link)
-                                work_queue.put([site, link, deepness + 1, url])
-                    work_queue_lock.release()
+                                work_queue_lock.acquire()
+                                work_queue.append([site, link, deepness + 1, url])
+                                work_queue_lock.release()
+                            url_list_lock.release()
             try:
+                url_list_lock.acquire()
                 url_list.remove(url)
+                url_list_lock.release()
             except Exception as e:
-                logger.error("[Main process] Error removing %s from TODO work - %s" % (url, str(e)))
+                logger.error("[Main process] Error removing %s from work queue - %s" % (url, str(e)))
 
 
 
@@ -182,11 +188,12 @@ if __name__ == '__main__':
 
     # Initialize shared structures
     manager = Manager()
-    work_queue = manager.Queue()
-    work_queue_lock = Lock()
-    status_queue = manager.Queue()
-    status_queue_lock = Lock()
+    work_queue = manager.list([])
+    work_queue_lock = manager.Lock()
+    status_queue = manager.list([])
+    status_queue_lock = manager.Lock()
     url_list = manager.list([])
+    url_list_lock = manager.Lock()
 
 
     # Create and call the workers
@@ -207,10 +214,10 @@ if __name__ == '__main__':
     while True:
         # Insert new work into queue if needed.
         work_queue_lock.acquire()
-        qsize = work_queue.qsize()
+        qsize = len(work_queue)
         logger.info("[Main process] Queued work %d" % qsize)
         work_queue_lock.release()
-        if qsize < (2 * processes):
+        if qsize == 0:
             logger.debug("[Main process] Getting work")
             now = datetime.now(timezone.utc)
             td = timedelta(-1 * update_threshold)
@@ -222,7 +229,7 @@ if __name__ == '__main__':
                 rq += ' WHERE priority = 0 AND update_timestamp < "%s"' % (period.strftime('%Y-%m-%d %H:%M:%S'))
             rq += ' AND id NOT IN (%s)' % ','.join(pending)
             rq += ' AND id > %s' % last_id
-            rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % (int(0.5 * processes))
+            rq += ' ORDER BY update_timestamp, id ASC LIMIT %d ' % processes
             pending = ["0"]
             database = Db()
             results = database.custom(rq)
@@ -233,7 +240,6 @@ if __name__ == '__main__':
                 work_queue_lock.acquire()
                 for result in results:
                     if clean:
-                        # Clean the domain info before crawling new info
                         request = "DELETE FROM domain_url WHERE domain_id = %d" % result["id"]
                         database.custom(request)
                     if args.priority:
@@ -243,8 +249,10 @@ if __name__ == '__main__':
                         domain.values.pop("update_timestamp")
                         domain.save()
                     url = 'http://' + result["name"] +'/'
+                    url_list_lock.acquire()
                     url_list.append(url)
-                    work_queue.put([result["id"], url, 0, None])
+                    url_list_lock.release()
+                    work_queue.insert(0, [result["id"], url, 0, None])
                     pending.append(str(result["id"]))
                     last_id = int(result["id"])
                 work_queue_lock.release()
@@ -254,17 +262,18 @@ if __name__ == '__main__':
         status_queue_lock.acquire()
         while True:
             try:
-                process_status = status_queue.get(block=False)
+                process_status = status_queue.pop()
                 process_dict[process_status[0]]["url"] = process_status[1]
                 process_dict[process_status[0]]["pid"] = process_status[2]
                 process_dict[process_status[0]]["geckodriver_pid"] = process_status[3]
                 process_dict[process_status[0]]["browser_pid"] = process_status[4]
                 process_dict[process_status[0]]["last_message"] = process_status[-1]
-            except queue.Empty:
-                break
             except Exception as e:
-                logger.error("[Main process] Status queue parsing error: %s" % str(e))
-                queue_not_empty = False
+                if re.search("empty", str(e)):
+                    break
+                else:
+                    logger.error("[Main process] Status queue parsing error: %s" % str(e))
+                    break
         status_queue_lock.release()
 
         # If some process does not respond for more than 5 minutes kill it and respawn it
