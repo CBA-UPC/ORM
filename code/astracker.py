@@ -28,7 +28,7 @@ def print_remaining(last_ts, sec, msg):
     dif = now - last_ts
     if dif > 1:
         work_queue_lock.acquire()
-        work_size = result_queue.qsize()
+        work_size = work_queue.qsize()
         work_queue_lock.release()
         result_queue_lock.acquire()
         result_size = result_queue.qsize()
