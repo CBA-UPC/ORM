@@ -532,7 +532,7 @@ if __name__ == '__main__':
 
         # Wait for the db workers to finish
         finished_processes = []
-        while len(finished_processes) < int(threads/3):
+        while len(finished_processes) < int(threads/2):
             ts, sc = print_remaining(ts, sc, "")
             if parent_pipe.poll(1):
                 worker_number = parent_pipe.recv()
