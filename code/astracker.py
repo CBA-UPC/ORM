@@ -364,14 +364,10 @@ def db_work(process_number):
                         ast.values.pop("dirt_level")
                         ast.values.pop("popularity_level")
                         ast.values["tree_nodes"] = item["ast"]["tree_nodes"]
-                        ast.values["resources"] = int(ast.values["resources"]) + 1
-                        if resource.values["is_tracking"]:
-                            ast.values["tracking_resources"] = int(ast.values["tracking_resources"]) + 1
                         while not ast.save():
                             ast.load(item["ast"]["hash"])
                             ast.values.pop("dirt_level")
                             ast.values.pop("popularity_level")
-                            ast.values["tracking_resources"] = int(ast.values["tracking_resources"]) + 1
                     resource.add(ast, {"offset": item["offset"], "length": item["length"]})
             except Exception as error:
                 logger.critical("[DB Worker %d] Crashed #2. AST: %s | Error: %s" % (process_number, str(item), str(error)))
