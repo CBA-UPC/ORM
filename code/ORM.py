@@ -126,7 +126,7 @@ def main(process):
                             if link not in url_list:
                                 url_list.append(link)
                                 work_queue_lock.acquire()
-                                work_queue.append([site, link, deepness + 1, url])
+                                work_queue.insert(0, [site, link, deepness + 1, url])
                                 work_queue_lock.release()
                             url_list_lock.release()
             try:

@@ -218,7 +218,6 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     time.sleep(10)
     window_handles = len(driver.window_handles)
 
-    link = ""
     # Search for consent manager specific buttons
     elements = find_cmp_button(driver, process)
     # If not found search for cookies config buttons
@@ -424,8 +423,6 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
             driver = reset_browser(driver, process, cache, update_ublock)
             return driver, FAILED, NO_REPEAT, links, policy_links
     
-    if link:
-        links.append(link)    
     # Save the screenshot and update the db update timestamp
     domain.values["update_timestamp"] = utc_now()
     domain.values["priority"] = 0
