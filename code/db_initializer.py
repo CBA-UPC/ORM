@@ -76,9 +76,9 @@ def init_types():
          "image/png", "image/svg+xml", "image/webp", "audio/3gpp", "audio/3gpp2", "audio/3gp2",
          "audio/aac", "audio/mpeg", "video/mpeg", "audio/flac", "audo/x-flac", "audio/mp4",
          "video/mp4", "audio/ogg", "video/ogg", "video/quicktime", "audio/wave", "audio/wav",
-         "audio/x-wav", "audio/x-pn-wav", "audio/webm", "video/webm", "unknown"],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+         "audio/x-wav", "audio/x-pn-wav", "audio/webm", "video/webm", "application/json", "json", "unknown"],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0],
+        [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         ["frame", "script", "script", "script", "script", "script", 
          "script", "script", "script", "script", "script", "script", 
          "script", "script", "script", "script", "script", "manifest", 
@@ -86,7 +86,7 @@ def init_types():
          "image", "image", "image", "media", "media", "media", 
          "media", "media", "media", "media", "media", "media", 
          "media", "media", "media", "media", "media", "media", 
-         "media", "media", "media", "media", "unknown"]
+         "media", "media", "media", "media", "json", "json", "unknown"]
     ]
 
     for i in range(len(values[0])):
@@ -131,41 +131,25 @@ def init_fonts():
 
 def init_collectors(fname):
     collector = Connector(database, "collector")
-    collector.load(hash_string("utiq"))
-    collector.values["name"] = "utiq"
-    collector.save()
-    category = Connector(database, "category")
-    category.load(hash_string("Service Provider"))
-    category.values["name"] = "Service Provider"
-    category.save()
-    collector.add(category)
-    category.load(hash_string("Ad Exchange"))
-    category.values["name"] = "Service Provider"
-    category.save()
-    collector.add(category)
-    for c in ["britepoolid", "lipbid", "criteId", "merkleId", "parrableId", "connectid", "tapadId", "quantcastId", "pubProvideId", "pairId"]:
-        collector.load(hash_string(c))
-        collector.values["name"] = c
-        collector.save()
-        collector.add(category)
+#    purpose = Connector(database, "purpose")
     with open(os.path.join(os.path.abspath("."), fname), "r") as f:
         for line in f.readlines():
             if len(line.split(", ")) == 1 and len(line.split(",")) > 1:
                 name = line.split(",")[0]
-                cat = line.split(",")[1]
+#                cat = line.split(",")[1]
             elif len(line.split(", ")) > 1 and len(line.split(",")) > 2:
                 name = line.split(", ")[0] + "," + line.split(",")[1]
-                cat = line.split(",")[2]
+#                cat = line.split(",")[2]
             name = name.replace("\r\n", "").replace("\n", "")
-            cat = cat.replace("\r\n", "").replace("\n", "")
+#            cat = cat.replace("\r\n", "").replace("\n", "")
             collector.load(hash_string(name))
             collector.values["name"] = name
             collector.save()
-            for c in cat.split(";"):
-                category.load(hash_string(c))
-                category.values["name"] = c
-                category.save()
-                collector.add(category)
+#            for c in cat.split(";"):
+#                purpose.load(hash_string(c))
+#                purpose.values["name"] = c
+#                purpose.save()
+#                collector.add(purpose)
 
 
 def init_mouse_tracking_domains():

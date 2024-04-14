@@ -103,12 +103,23 @@ def main(process):
             repeat = True
             while extra_tries > 0 and not completed and repeat:
                 extra_tries -= 1
-                driver, completed, repeat, links = visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublock, geo_db)
+                driver, completed, repeat, links, policy_links = visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublock, geo_db)
             if completed:
                 if parent:
                     insert_link(db, parent, url)
                 if len(links) > 0 and max_deep > deepness:
                     for link in links:
+                        link_url = Connector(db, "url")
+                        if not link_url.load(hash_string(link)):
+                            url_list_lock.acquire()
+                            if link not in url_list:
+                                url_list.append(link)
+                                work_queue_lock.acquire()
+                                work_queue.append([site, link, deepness + 1, url])
+                                work_queue_lock.release()
+                            url_list_lock.release()
+                if len(policy_links) > 0:
+                    for link in policy_links:
                         link_url = Connector(db, "url")
                         if not link_url.load(hash_string(link)):
                             url_list_lock.acquire()
@@ -148,6 +159,8 @@ parser.add_argument('--update-ublock', dest='update_ublock', action="store_true"
                     help='Updates uBlock pattern lists every time a new browser is launched (Default: no update)')
 parser.add_argument('--priority-scan', dest='priority', action="store_true",
                     help='Activates priority scan. This ORM will only scan domains with the priority flag enabled')
+parser.add_argument('--no-vframe', dest='vframe', action="store_true",
+                    help='Disables virtual frame (executes browser in real GUI)')
 
 
 if __name__ == '__main__':
@@ -167,8 +180,9 @@ if __name__ == '__main__':
     if verbose[str(v)]:
         logger.setLevel(verbose[str(v)])
 
-    display = Display(visible=False, size=(1920, 1080))
-    display.start()
+    if not args.vframe:
+        display = Display(visible=False, size=(1920, 1080))
+        display.start()
 
     # If thread parameter is auto get the (total-1) or the available CPU's, whichever is smaller
     logger.info("Calculating processes...")
@@ -310,4 +324,6 @@ if __name__ == '__main__':
         
         ### TODO: Catch the Ctrl+C hotkey and clean the work queue and cleanly stop the current processes using the process object inside the dict
         time.sleep(5)
-    display.stop()
+
+    if not args.vframe:
+        display.stop()

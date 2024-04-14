@@ -118,7 +118,7 @@ def manage_requests(db, process, domain, request_list, temp_folder, geo_db):
                 if "content-type" in elem["response_headers"]:
                     if not content_type.load(hash_string(elem["response_headers"]["content-type"].split(";")[0])):
                         content_type.values["name"] = elem["response_headers"]["content-type"].split(";")[0]
-                        if re.search("text", content_type.values["name"]) or re.search("script", content_type.values["name"]):
+                        if re.search("text", content_type.values["name"]) or re.search("script", content_type.values["name"]) or re.search("json", content_type.values["name"]):
                             content_type.values["download"] = 1
                         if not content_type.save():
                             content_type.load(hash_string(elem["response_headers"]["content-type"].split(";")[0]))
@@ -152,7 +152,7 @@ def manage_requests(db, process, domain, request_list, temp_folder, geo_db):
                     seconds -= 1
                     time.sleep(1)
         else:
-            # I URL has already been found update the timestamp
+            # If URL has already been found update the timestamp
             url.values["update_timestamp"] = t
             url.save()
         if "server_ip" in elem.keys() and elem["server_ip"]:
@@ -180,71 +180,83 @@ def manage_requests(db, process, domain, request_list, temp_folder, geo_db):
             url.add(address)
 
         # Depending on the resource type download it if needed
-        content_type = Connector(db, "mime_type")
-        content_type.load(url.values["mime_type_id"])
-        if content_type.values["download"]:
-            resource = Connector(db, "resource")
-            if url.values["resource_id"] or "hash" in elem.keys():
-                if url.values["resource_id"]:
-                    resource.load(url.values["resource_id"])
-                elif "hash" in elem.keys():
-                    if not resource.load(elem["hash"]):
-                        if elem["blocked"]:
-                            resource.values["is_tracking"] = 1
-                        resource.values["insert_date"] = t
-                        resource.values["update_timestamp"] = t
-                        if not resource.save():
-                            resource.load(elem["hash"])
-                        url.values["resource_id"] = resource.values["id"]
+        resource = Connector(db, "resource")
+        if url.values["resource_id"] or "hash" in elem.keys():
+            if url.values["resource_id"]:
+                resource.load(url.values["resource_id"])
+            elif "hash" in elem.keys():
+                if not resource.load(elem["hash"]):
+                    if elem["blocked"]:
+                        resource.values["is_tracking"] = 1
+                    resource.values["insert_date"] = t
+                    resource.values["update_timestamp"] = t
+                    if not resource.save():
+                        resource.load(elem["hash"])
+                    url.values["resource_id"] = resource.values["id"]
+                    url.save()
+            resource.values["update_timestamp"] = t
+            resource.values["pending_update"] = 1
+            if elem["blocked"]:
+                resource.values["is_tracking"] = 1
+            if resource.values["hash"] and not resource.values["file"]:
+                os.makedirs(os.path.join(os.path.abspath("."), temp_folder), exist_ok=True)
+                filename = os.path.join(temp_folder, domain.values["name"] + '.tmp')
+                if download_url(process, url.values["url"], filename):
+                    size = os.stat(filename).st_size
+                    resource.values["size"] = size
+                    # Compute the fuzzy hash
+                    resource.values["fuzzy_hash"] = lsh_file(filename)
+                    # Compress the code
+                    with open(filename, 'rb') as f:
+                        code = f.read()
+                    compressed_code = zlib.compress(code)
+                    try:
+                        useless = json.loads(code)
+                    except Exception:
+                        # Not a JSON file. Check other enabled download types
+                        content_type = Connector(db, "mime_type")
+                        content_type.load(url.values["mime_type_id"])
+
+                        if content_type.values["download"]:
+                            resource.values["file"] = compressed_code
+                            try:
+                                with open(filename, 'r', encoding="utf-8") as f:
+                                    code = f.read()
+                                    for collector in collectors:
+                                        if re.search(collector.values["name"], code):
+                                            url.add(collector)
+                            except Exception as e:
+                                logger.error("[Worker %s] Decoding error: %s" % (process, str(e)))
+                    else:
+                        # Change the URL mime_type to JSON and save the file
+                        content_type = Connector(db, "mime_type")
+                        if not content_type.load(hash_string("json")):
+                            content_type.save()
+                        url.values["mime_type_id"] = content_type.values["id"]
                         url.save()
-                resource.values["update_timestamp"] = t
-                resource.values["pending_update"] = 1
-                if elem["blocked"]:
-                    resource.values["is_tracking"] = 1
-                if resource.values["hash"] and not resource.values["file"]:
-                    os.makedirs(os.path.join(os.path.abspath("."), temp_folder), exist_ok=True)
-                    filename = os.path.join(temp_folder, domain.values["name"] + '.tmp')
-                    if download_url(process, url.values["url"], filename):
-                        size = os.stat(filename).st_size
-                        # Compress the code
-                        with open(filename, 'rb') as f:
-                            code = f.read()
-                        compressed_code = zlib.compress(code)
                         resource.values["file"] = compressed_code
-                        resource.values["size"] = size
-                        # Compute the fuzzy hash
-                        resource.values["fuzzy_hash"] = lsh_file(filename)
                         try:
                             with open(filename, 'r', encoding="utf-8") as f:
                                 code = f.read()
                                 for collector in collectors:
-                                    if collector.values["name"] == "utiq":
-                                        false_positives = ["autiqu", "outiqu", "eutiqu", "autiqo", "marutiq"]
-                                        found = False
-                                        for fp in false_positives:
-                                            if re.search(fp, code):
-                                                found = True
-                                        if not found and re.search("utiq", code):
-                                            url.add(collector)
-                                    else:
-                                        if re.search(collector.values["name"], code):
-                                            url.add(collector)
+                                    if re.search(collector.values["name"], code):
+                                        url.add(collector)
                         except Exception as e:
                             logger.error("[Worker %s] Decoding error: %s" % (process, str(e)))
-                    else:
-                        logger.error("[Worker %s] Error #1: Resource not correctly saved - %s" % (process, elem["url"]))
-                if not resource.save():
-                    # Wait until the other thread saves the file inside the database (or 30s max)
-                    seconds = 30
-                    while not resource.load(elem["hash"]) and seconds > 0:
-                        seconds -= 1
-                        time.sleep(1)
-                # Update the most probable type of the resource:
-                # --- Different URLs pointing to the same resource can mark it as different types.
-                # --- We set the most prevalent one
-                #db.call("ComputeResourceType", values=[resource.values["id"]])
-                # TODO: Fix the popularity update DB procedure
-                #db.call("ComputeResourcePopularityLevel", values=[resource.values["id"]])
+                else:
+                    logger.error("[Worker %s] Error #1: Resource not correctly saved - %s" % (process, elem["url"]))
+            if not resource.save():
+                # Wait until the other thread saves the file inside the database (or 30s max)
+                seconds = 30
+                while not resource.load(elem["hash"]) and seconds > 0:
+                    seconds -= 1
+                    time.sleep(1)
+            # Update the most probable type of the resource:
+            # --- Different URLs pointing to the same resource can mark it as different types.
+            # --- We set the most prevalent one
+            #db.call("ComputeResourceType", values=[resource.values["id"]])
+            # TODO: Fix the popularity update DB procedure
+            #db.call("ComputeResourcePopularityLevel", values=[resource.values["id"]])
 
         # json.dump(elem, sys.stdout, indent=2, ensure_ascii=False)
 

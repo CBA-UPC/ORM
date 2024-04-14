@@ -26,9 +26,10 @@ import logging.config
 import zlib
 
 # 3rd party modules
+from pyshadow.main import Shadow
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException
-from selenium.common.exceptions import NoSuchWindowException, InvalidArgumentException
+from selenium.common.exceptions import NoSuchWindowException, InvalidArgumentException, ElementNotInteractableException, ElementClickInterceptedException, StaleElementReferenceException, NoSuchElementException
 from selenium.webdriver.common.alert import Alert
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
@@ -155,13 +156,14 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     """ Loads the website and extract its information. """
 
     links = []
+    policy_links = []
     # Save uBlock tab info to get back when needed
     try:
         blocker_tab_handle = driver.current_window_handle
     except Exception as e:
         logger.error("Error saving uBlock tab: %s [Worker %d]" % (str(e), process))
         driver = reset_browser(driver, process, cache, update_ublock)
-        return driver, FAILED, REPEAT, links
+        return driver, FAILED, REPEAT, links, policy_links
     try:
         driver.execute_script('''window.open();''')
         second_tab_handle = driver.window_handles[-1]
@@ -169,7 +171,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     except WebDriverException as e:
         logger.error("WebDriverException (1) on %s / Error: %s [Worker %d]" % (domain.values["name"], str(e), process))
         driver = reset_browser(driver, process, cache, update_ublock)
-        return driver, FAILED, REPEAT, links
+        return driver, FAILED, REPEAT, links, policy_links
 
     logger.info('[Worker %d] URL: %s' % (process, url))
     # Load the website and wait some time inside it
@@ -188,7 +190,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
         except WebDriverException as e:
             logger.error("[Worker %d] Error clearing session storage: %s" % (process, str(e)))
             driver = reset_browser(driver, process, cache, update_ublock)
-        return driver, FAILED, REPEAT, links
+        return driver, FAILED, REPEAT, links, policy_links
     except WebDriverException as e:
         # Remove Stacktrace for readability -- Most of the time this error is launched when visiting
         # a domain with no webpage associated -- The old log message should be used in production
@@ -203,17 +205,134 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
-        return driver, FAILED, NO_REPEAT, links
+        return driver, FAILED, NO_REPEAT, links, policy_links
     except Exception as e:
         logger.error("%s [Worker %d]" % (str(e), process))
         driver = reset_browser(driver, process, cache, update_ublock)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
-        return driver, FAILED, NO_REPEAT, links
+        return driver, FAILED, NO_REPEAT, links, policy_links
 
     # Wait some time inside the website
     time.sleep(10)
+    window_handles = len(driver.window_handles)
+
+    link = ""
+    # Search for consent manager specific buttons
+    elements = find_cmp_button(driver, process)
+    # If not found search for cookies config buttons
+    if not elements[0]:
+        elements = find_cmp_config(driver, process)
+        for element in elements[0]:
+            if click_element(driver, element, elements[1], process):
+                # If opened in new window add it to also download it
+                if len(driver.window_handles) > window_handles:
+                    link = element.get_attribute('href')
+                    if link:
+                        link = link.split("#")[0]
+                        while link and link[0] == " ":
+                            link = link[1:]
+                        # If it is a malformed link try to fix it by adding the hosting domain
+                        if link and link[0] == '/':
+                            link = url.split(extract_domain(url))[0] + extract_domain(url) + link
+                        elif link and link[0] != "h" and 1 < len(link.split("/")[0].split(".")) < 4:
+                            link = "http://" + link
+                        elif link and link[0:4] != 'http':
+                            link = url.split(extract_domain(url))[0] + extract_domain(url) + '/' + link
+                        policy_links.append(link)
+                    driver.switch_to.window(driver.window_handles[-1])
+                    driver.close()
+                    driver.switch_to.window(driver.window_handles[1])
+                else: # If not new window search for consent manager specific buttons
+                    elements2 = find_cmp_button(driver, process)
+                    for element2 in elements2[0]:
+                        if click_element(driver, element2, elements2[1], process):
+                            # If opened in new window add it to also download it
+                            if len(driver.window_handles) > window_handles:
+                                link = element2.get_attribute('href')
+                                if link:
+                                    link = link.split("#")[0]
+                                    while link and link[0] == " ":
+                                        link = link[1:]
+                                    # If it is a malformed link try to fix it by adding the hosting domain
+                                    if link and link[0] == '/':
+                                        link = url.split(extract_domain(url))[0] + extract_domain(url) + link
+                                    elif link and link[0] != "h" and 1 < len(link.split("/")[0].split(".")) < 4:
+                                        link = "http://" + link
+                                    elif link and link[0:4] != 'http':
+                                        link = url.split(extract_domain(url))[0] + extract_domain(url) + '/' + link
+                                    policy_links.append(link)
+                                driver.switch_to.window(driver.window_handles[-1])
+                                driver.close()
+                                driver.switch_to.window(driver.window_handles[1])
+    else:
+        clicked = False
+        for element in elements[0]:
+            if click_element(driver, element, elements[1], process):
+                clicked = True
+                # If opened in new window add it to also download it
+                if len(driver.window_handles) > window_handles:
+                    link = element.get_attribute('href')
+                    if link:
+                        link = link.split("#")[0]
+                        while link and link[0] == " ":
+                            link = link[1:]
+                        # If it is a malformed link try to fix it by adding the hosting domain
+                        if link and link[0] == '/':
+                            link = url.split(extract_domain(url))[0] + extract_domain(url) + link
+                        elif link and link[0] != "h" and 1 < len(link.split("/")[0].split(".")) < 4:
+                            link = "http://" + link
+                        elif link and link[0:4] != 'http':
+                            link = url.split(extract_domain(url))[0] + extract_domain(url) + '/' + link
+                        policy_links.append(link)
+                    driver.switch_to.window(driver.window_handles[-1])
+                    driver.close()
+                    driver.switch_to.window(driver.window_handles[1])
+                if not clicked:
+                    elements = find_cmp_config(driver, process)
+                    for element in elements[0]:
+                        if click_element(driver, element, elements[1], process):
+                            # If opened in new window add it to also download it
+                            if len(driver.window_handles) > window_handles:
+                                link = element.get_attribute('href')
+                                if link:
+                                    link = link.split("#")[0]
+                                    while link and link[0] == " ":
+                                        link = link[1:]
+                                    # If it is a malformed link try to fix it by adding the hosting domain
+                                    if link and link[0] == '/':
+                                        link = url.split(extract_domain(url))[0] + extract_domain(url) + link
+                                    elif link and link[0] != "h" and 1 < len(link.split("/")[0].split(".")) < 4:
+                                        link = "http://" + link
+                                    elif link and link[0:4] != 'http':
+                                        link = url.split(extract_domain(url))[0] + extract_domain(url) + '/' + link
+                                    policy_links.append(link)
+                                driver.switch_to.window(driver.window_handles[-1])
+                                driver.close()
+                                driver.switch_to.window(driver.window_handles[1])
+                            else: # If not new window search for consent manager specific buttons
+                                elements2 = find_cmp_button(driver, process)
+                                for element2 in elements2[0]:
+                                    if click_element(driver, element2, elements2[1], process):
+                                        # If opened in new window add it to also download it
+                                        if len(driver.window_handles) > window_handles:
+                                            link = element2.get_attribute('href')
+                                            if link:
+                                                link = link.split("#")[0]
+                                                while link and link[0] == " ":
+                                                    link = link[1:]
+                                                # If it is a malformed link try to fix it by adding the hosting domain
+                                                if link and link[0] == '/':
+                                                    link = url.split(extract_domain(url))[0] + extract_domain(url) + link
+                                                elif link and link[0] != "h" and 1 < len(link.split("/")[0].split(".")) < 4:
+                                                    link = "http://" + link
+                                                elif link and link[0:4] != 'http':
+                                                    link = url.split(extract_domain(url))[0] + extract_domain(url) + '/' + link
+                                                policy_links.append(link)
+                                            driver.switch_to.window(driver.window_handles[-1])
+                                            driver.close()
+                                            driver.switch_to.window(driver.window_handles[1])
 
     # We collect again the URL after redirections
     original_url = url
@@ -229,21 +348,21 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
-        return driver, FAILED, REPEAT, links
+        return driver, FAILED, REPEAT, links, policy_links
     except WebDriverException as e:
         logger.warning("WebDriverException (3) on %s / Error: %s [Worker %d]" % (domain.values["name"], str(e), process))
         driver = reset_browser(driver, process, cache, update_ublock)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
-        return driver, FAILED, REPEAT, links
+        return driver, FAILED, REPEAT, links, policy_links
     except Exception as e:
         logger.error("%s [Worker %d]" % (str(e), process))
         driver = reset_browser(driver, process, cache, update_ublock)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
-        return driver, FAILED, REPEAT, links
+        return driver, FAILED, REPEAT, links, policy_links
 
     compressed_screenshot = None
     size = 0
@@ -276,7 +395,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     except WebDriverException as e:
         logger.warning("WebDriverException (3) on %s / Error: %s [Worker %d]" % (domain.values["name"], str(e), process))
         driver = reset_browser(driver, process, cache, update_ublock)
-        return driver, FAILED, REPEAT, links
+        return driver, FAILED, REPEAT, links, policy_links
 
     # Process traffic from uBlock Origin tab sessionStorage
     try:
@@ -284,7 +403,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     except Exception as e:
         logger.error("Error accessing uBlock tab: %s [Worker %d]" % (str(e), process))
         driver = reset_browser(driver, process, cache, update_ublock)
-        return driver, FAILED, REPEAT, links
+        return driver, FAILED, REPEAT, links, policy_links
     try:
         storage = SessionStorage(driver)
         web_list = {}
@@ -293,7 +412,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     except NoSuchWindowException as e:
         logger.error("[Worker %d] Error accessing the session storage: %s" % (process, str(e)))
         driver = reset_browser(driver, process, cache, update_ublock)
-        return driver, FAILED, REPEAT, links
+        return driver, FAILED, REPEAT, links, policy_links
     else:
         # Insert data and clear storage before opening the next website
         manage_requests(db, process, domain, web_list, temp_folder, geo_db)
@@ -303,12 +422,238 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
         except WebDriverException as e:
             logger.error("[Worker %d] Error clearing session storage: %s" % (process, str(e)))
             driver = reset_browser(driver, process, cache, update_ublock)
-            return driver, FAILED, NO_REPEAT, links
-        
+            return driver, FAILED, NO_REPEAT, links, policy_links
+    
+    if link:
+        links.append(link)    
     # Save the screenshot and update the db update timestamp
     domain.values["update_timestamp"] = utc_now()
     domain.values["priority"] = 0
     if compressed_screenshot:
         domain.values["screenshot"] = compressed_screenshot
     domain.save()
-    return driver, COMPLETED, NO_REPEAT, links
+    return driver, COMPLETED, NO_REPEAT, links, policy_links
+
+def find_element_in_content(driver, process, extra_texts=[]):
+    shadow = Shadow(driver)
+    possible_texts = ["cookies de terceros", 
+                      "third-party cookies", 
+                      "customize partners",
+                      "customize purposes",
+                      "drittanbieter",
+                      "list of partners",
+                      "list of partners (vendors)",
+                      "list of partners (service providers or vendors)",
+                      "lista de asociados (proveedores)",
+                      "lista de socios (proveedores)",
+                      "nuestros socios",
+                      "other companies",
+                      "our partners",
+                      "our third party partners",
+                      "partner",
+                      "partenaires",
+                      "show purposes",
+                      "storage preferences",
+                      "technology partners",
+                      "third-party companies",
+                      "third party partners",
+                      "third parties",
+                      "vendors",
+                      "ver nuestros socios",
+                      "ver partners",
+                      "veure els nostres socis",
+                      "view cookie settings",
+                      "view cookies",
+                      "view our partners",
+                      "voir nos partenaires",
+                      "non-iab",
+                      "iab partners"]
+    possible_xpaths = ['//button[normalize-space(translate(descendant::*[last()]/text(), \'ABCDEFGHIJKLMNOPQRSTUVWXYZ\', \'abcdefghijklmnopqrstuvwxyz\')) = \'%s\']',
+                       '//a[normalize-space(translate(descendant::*[last()]/text(), \'ABCDEFGHIJKLMNOPQRSTUVWXYZ\', \'abcdefghijklmnopqrstuvwxyz\')) = \'%s\']',
+                       '//button[translate(normalize-space(text()), \'ABCDEFGHIJKLMNOPQRSTUVWXYZ\', \'abcdefghijklmnopqrstuvwxyz\')= \'%s\']',
+                       '//a[translate(normalize-space(text()), \'ABCDEFGHIJKLMNOPQRSTUVWXYZ\', \'abcdefghijklmnopqrstuvwxyz\')= \'%s\']']
+    search_results = []
+
+    for xpath in possible_xpaths:
+        texts = possible_texts + extra_texts
+        for i in range(len(texts)):
+            text = texts[i]
+#            logger.info(f"Searching for element with XPATH selector: %s" % text)
+            elements = shadow.find_elements_by_xpath(xpath % text, True)
+
+            for element in elements:
+                found = False
+                for element2 in search_results:
+                    if element.id == element2.id:
+                        found = True
+                if not found:
+                    # Order the found elements with the most important first
+                    if i <= 25:
+                        search_results.insert(0, element)
+                    else:
+                        search_results.append(element)
+                    logger.info("[Worker %d] CMP Checker: Element found with XPATH selector %s" % (process, text))
+
+    return search_results
+
+def find_config_in_content(driver, process, extra_texts=[]):
+    shadow = Shadow(driver)
+    possible_texts = ["administrar las cookies y obtener más información",
+                     "adjust settings",
+                     "administrar",
+                     "administrar cookies",
+                     "advanced",
+                     "ajuste de cookies",
+                     "ajustes",
+                     "ajustes de cookies",
+                     "ajuste sus preferencias",
+                     "centro de privacidad",
+                     "change settings",
+                     "click here",
+                     "configuración de cookies",
+                     "configurar",
+                     "cookie consent manager",
+                     "cookie consent tool",
+                     "cookie details",
+                     "cookie preferences",
+                     "cookie settings",
+                     "cookie settings page",
+                     "cookies details",
+                     "cookies settings",
+                     "customise",
+                     "customise my choices",
+                     "customise cookie preferences",
+                     "customise third-party cookies",
+                     "customize",
+                     "customize settings",
+                     "en savoir plus",
+                     "elección de cookies",
+                     "gestionar cookies",
+                     "gestionar las cookies",
+                     "gestionar configuración de privacidad",
+                     "here",
+                     "manage",
+                     "manage choices",
+                     "manage cookie settings",
+                     "manage cookies",
+                     "manage options",
+                     "manage preferences",
+                     "manage privacy settings",
+                     "manage settings",
+                     "manage your cookies",
+                     "manage your cookie preferences",
+                     "manage your tracker settings",
+                     "más información",
+                     "més informació",
+                     "more options",
+                     "more choices",
+                     "options",
+                     "panel de configuración",
+                     "paramétrer",
+                     "paramétrer les cookies",
+                     "personalizar cookies",
+                     "personalize",
+                     "privacy center",
+                     "set cookie options",
+                     "set up",
+                     "settings",
+                     "show details",
+                     "update settings",
+                     "información de las cookies",
+                     "privacy policy",
+                     "cookie policy"]
+    possible_xpaths = ['//button[normalize-space(translate(descendant::*[last()]/text(), \'ABCDEFGHIJKLMNOPQRSTUVWXYZ\', \'abcdefghijklmnopqrstuvwxyz\')) = \'%s\']',
+                       '//a[normalize-space(translate(descendant::*[last()]/text(), \'ABCDEFGHIJKLMNOPQRSTUVWXYZ\', \'abcdefghijklmnopqrstuvwxyz\')) = \'%s\']',
+                       '//button[translate(normalize-space(text()), \'ABCDEFGHIJKLMNOPQRSTUVWXYZ\', \'abcdefghijklmnopqrstuvwxyz\')= \'%s\']',
+                       '//a[translate(normalize-space(text()), \'ABCDEFGHIJKLMNOPQRSTUVWXYZ\', \'abcdefghijklmnopqrstuvwxyz\')= \'%s\']']
+    search_results = []
+    for xpath in possible_xpaths:
+        texts = possible_texts + extra_texts
+        for i in range(len(texts)):
+            text = texts[i]
+#            logger.info(f"Searching for element with XPATH selector: %s" % text)
+            elements = shadow.find_elements_by_xpath(xpath % text, True)
+
+            for element in elements:
+                found = False
+                for element2 in search_results:
+                    if element.id == element2.id:
+                        found = True
+                if not found:
+                    # Order the found elements with the most important first
+                    search_results.append(element)
+                    logger.info("[Worker %d] CMP Checker: Config found with XPATH selector %s" % (process, text))
+
+    return search_results
+
+def find_iframes(driver):
+    shadow = Shadow(driver)
+    elements = []
+    iter_elements = shadow.find_elements_by_xpath("//iframe", True)
+    if iter_elements:
+        elements.extend(iter_elements)
+    return elements
+
+
+def find_cmp_button(driver, process):
+    elements = find_element_in_content(driver, process)
+
+    if not elements:
+        logger.info("[Worker %d] CMP Checker: Element not found, searching in iframes" % (process))
+        iframes = find_iframes(driver)
+        if iframes:
+            for iframe in iframes:
+                iframe_id = iframe.get_attribute("id")
+                if not iframe_id:
+                    continue
+                driver.switch_to.frame(iframe.get_attribute("id"))
+                elements = find_element_in_content(driver, process, ["partners"])
+                driver.switch_to.default_content()
+                if elements:
+                    logger.info("[Worker %d] CMP Checker: Element found iun iframe %d" % (process, iframe_id))
+                    return [elements, iframe_id]
+    return [elements, 0]
+
+def find_cmp_config(driver, process):
+    logger.info("[Worker %d] CMP Checker: Element not found, searching for config elements" % (process))
+    elements = find_config_in_content(driver, process)
+
+    if not elements:
+        logger.info("[Worker %d] CMP Checker: Config not found, searching in iframes" % (process))
+        iframes = find_iframes(driver)
+        if iframes:
+            for iframe in iframes:
+                iframe_id = iframe.get_attribute("id")
+                if not iframe_id:
+                    continue
+                driver.switch_to.frame(iframe.get_attribute("id"))
+                elements = find_config_in_content(driver, process, ["learn more"])
+                driver.switch_to.default_content()
+                if elements:
+                    logger.info("[Worker %d] CMP Checker: Config found in iframes %d" % (process, iframe_id))
+                    return [elements, iframe_id]
+    return [elements, 0]
+
+def click_element(driver, element, iframe, process):
+    done = True
+    if iframe:
+        driver.switch_to.frame(iframe)
+    try:
+        element.click()
+        # Wait some time to load new resources
+        time.sleep(10)
+    except ElementNotInteractableException as e:
+        logger.info("[Worker %d] CMP Checker: Element not interactable" % (process))
+        done = False
+    except ElementClickInterceptedException as e:
+        logger.info("[Worker %d] CMP Checker: Element intercepted" % (process))
+        done = False
+    except StaleElementReferenceException as e:
+        logger.info("[Worker %d] CMP Checker: Element staled" % (process))
+        done = False
+    except NoSuchElementException as e:
+        logger.info("[Worker %d] CMP Checker: Element not present" % (process))
+        done = False
+    if iframe:
+        driver.switch_to.default_content()
+    return done
