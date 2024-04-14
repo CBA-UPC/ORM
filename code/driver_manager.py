@@ -607,7 +607,7 @@ def find_cmp_button(driver, process):
                 elements = find_element_in_content(driver, process, ["partners"])
                 driver.switch_to.default_content()
                 if elements:
-                    logger.info("[Worker %d] CMP Checker: Element found iun iframe %d" % (process, iframe_id))
+                    logger.info("[Worker %d] CMP Checker: Element found iun iframe %s" % (process, iframe_id))
                     return [elements, iframe_id]
     return [elements, 0]
 
@@ -627,7 +627,7 @@ def find_cmp_config(driver, process):
                 elements = find_config_in_content(driver, process, ["learn more"])
                 driver.switch_to.default_content()
                 if elements:
-                    logger.info("[Worker %d] CMP Checker: Config found in iframes %d" % (process, iframe_id))
+                    logger.info("[Worker %d] CMP Checker: Config found in iframes %s" % (process, iframe_id))
                     return [elements, iframe_id]
     return [elements, 0]
 
