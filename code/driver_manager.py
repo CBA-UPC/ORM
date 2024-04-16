@@ -651,6 +651,9 @@ def click_element(driver, element, iframe, process):
     except NoSuchElementException as e:
         logger.info("[Worker %d] CMP Checker: Element not present" % (process))
         done = False
+    except WebDriverException as e:
+        logger.info("[Worker %d] CMP Checker: WebDriver Exception" % (process))
+        done = False
     if iframe:
         driver.switch_to.default_content()
     return done
