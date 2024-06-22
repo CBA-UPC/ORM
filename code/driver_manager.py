@@ -24,6 +24,7 @@ import re
 import time
 import logging.config
 import zlib
+import json
 
 # 3rd party modules
 from selenium import webdriver
@@ -45,10 +46,13 @@ from session_storage import SessionStorage
 geckodriver_path = os.path.join(os.path.abspath("."), "../assets/firefox/geckodriver-v0.33.0-linux64/geckodriver")
 firefox_path     = os.path.join(os.path.abspath("."), "../assets/firefox/firefox-115.5.0esr/firefox/firefox")
 
-# Hardcoded paths for the virtual machine
-# geckodriver_path = "/home/eprivo/Desktop/geckodriver-v0.33.0-linux64/geckodriver"
-# firefox_path     = "/home/eprivo/Desktop/firefox-115.5.0esr/firefox/firefox"
+BROWSER_SCRIPTS_PATH = "browser_scripts.json" 
+BROWSER_SCRIPTS_ENABLED = True
+browser_scripts = {}
 
+if BROWSER_SCRIPTS_ENABLED:
+    with open(BROWSER_SCRIPTS_PATH, 'r') as file:
+        browser_scripts = json.load(file)
 
 COMPLETED = REPEAT = True
 FAILED = NO_REPEAT = False
@@ -259,6 +263,22 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
                 compressed_screenshot = zlib.compress(blob_value)
         if os.path.isfile(os.path.join(temp_folder, domain.values["name"] + 'ss.png')):
             os.remove(filename)
+
+    # Execute browser scripts
+    if BROWSER_SCRIPTS_ENABLED:
+        collected_features = {}
+        try:
+            collected_features["frontend_load_time"] = driver.execute_script(browser_scripts["TIME_FRONTEND"])
+            collected_features["backend_load_time"] = driver.execute_script(browser_scripts["TIME_BACKEND"])
+            collected_features["doc_height"] = driver.execute_script(browser_scripts["SCROLL_HEIGHT"])
+            collected_features["css_classes"] = driver.execute_script(browser_scripts["CSS_CLASSES"])
+            collected_features["listeners_interact"] = driver.execute_script(browser_scripts["EVENT_LISTENERS_INTERACT"])
+            collected_features["cookie_values"] = driver.get_cookies()  # Not a script
+            collected_features["dom_tree"] = driver.execute_script(browser_scripts["DOM_NODES"])
+            collected_features["html_tag_seq"] = driver.execute_script(browser_scripts["HTML_TAG_SEQUENCE"])
+        except Exception as e:
+            logger.warning(f"Failed executing scripts on browser! [Worker {process}]")
+            logger.warning(e)
 
     # Close the browser's URL tab
     try:
