@@ -38,7 +38,7 @@ from selenium.webdriver.firefox.service import Service # Used to define geckodri
 # Own modules
 from utils import utc_now, extract_domain
 from db_manager import Db, Connector
-from data_manager import manage_requests, parse_internal_links, insert_link
+from data_manager import manage_requests, parse_internal_links, insert_link, insert_browser_data
 from session_storage import SessionStorage
 
 
@@ -317,6 +317,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     else:
         # Insert data and clear storage before opening the next website
         manage_requests(db, process, domain, web_list, temp_folder, geo_db)
+        insert_browser_data(db, process, url, collected_features)
         links = parse_internal_links(url, webcode)
         try:
             storage.clear()
