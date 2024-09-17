@@ -266,53 +266,6 @@ def manage_requests(db, process, domain, request_list, temp_folder, geo_db):
     domain.save()
 
 
-def insert_browser_data(db, process, url, collected_features):
-    url_hash = hash_string(url)
-   
-    # Check that table for given url already exists
-    hash_in_url_table = db.custom("SELECT id FROM url WHERE hash = \'%s\'" % (url_hash))
-
-    url_id = hash_in_url_table[0]["id"]
-
-    if not hash_in_url_table:
-        return False
-    # If an entry with url_hash exists in url table, but doesn't exist in browser_script_data table
-    # we have to create the entry and write all fields.
-    hash_in_script_table = db.custom("SELECT id FROM browser_script_data WHERE url_hash = \'%s\'" % (url_hash))
-    if not hash_in_script_table:
-        script_data = Connector(db, "browser_script_data")
-        script_data.values["url_hash"] = url_hash
-        script_data.values["frontend_load_time"] = collected_features["frontend_load_time"]
-        script_data.values["backend_load_time"] = collected_features["backend_load_time"] 
-        script_data.values["doc_height"] = collected_features["doc_height"]
-        script_data.values["css_classes"] = collected_features["css_classes"]
-        script_data.values["listeners_interact"] = collected_features["listeners_interact"]
-        script_data.values["dom_tree_nodes"] = collected_features["dom_tree"]
-        # script_data.values["html_tag_seq"] = collected_features["html_tag_seq"]
-        script_data.save()
-        logger.warn(f"[Worker {process}] collected data saved => browser_script_data")
-
-    for cookie_json in collected_features["cookie_values"]:
-        # Check if cookie with same name and url_id exists
-        url_cookie_in_table = db.custom("SELECT id FROM browser_stored_cookies WHERE url_id = \'%s\' AND name = \'%s\'" % (url_id, cookie_json["name"]))
-        if not url_cookie_in_table:
-            stored_cookies = Connector(db, "browser_stored_cookies")
-            stored_cookies.values["url_id"] = url_id
-            stored_cookies.values["name"] = cookie_json["name"]
-            stored_cookies.values["value"] = cookie_json["value"]
-            stored_cookies.values["path"] = cookie_json["path"]
-            stored_cookies.values["domain"] = cookie_json["domain"]
-            stored_cookies.values["secure"] = cookie_json["secure"]
-            stored_cookies.values["httpOnly"] = cookie_json["httpOnly"]
-            stored_cookies.values["expiry"] = cookie_json["expiry"] if ("expiry" in cookie_json) else -1
-            stored_cookies.values["sameSite"] = cookie_json["sameSite"]
-            stored_cookies.values["category_opencookiedb"] = "undefined"
-            stored_cookies.save()
-            logger.warn(f"[Worker {process}] cookie data saved => browser_stored_cookies")
-    
-    return True
-
-
 def insert_link(db, parent_url, link_url):
     """ Inserts a new link inside the parent URL """
 

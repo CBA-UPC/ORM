@@ -36,7 +36,7 @@ from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.firefox.service import Service # Used to define geckodriver bin + log_path in selenium 4.16
 
 # Own modules
-from utils import utc_now, extract_domain
+from utils import utc_now, extract_domain, hash_string
 from db_manager import Db, Connector
 from data_manager import manage_requests, parse_internal_links, insert_link, insert_browser_data
 from session_storage import SessionStorage
@@ -264,22 +264,6 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
         if os.path.isfile(os.path.join(temp_folder, domain.values["name"] + 'ss.png')):
             os.remove(filename)
 
-    # Execute browser scripts
-    if BROWSER_SCRIPTS_ENABLED:
-        collected_features = {}
-        try:
-            collected_features["frontend_load_time"] = driver.execute_script(browser_scripts["TIME_FRONTEND"])
-            collected_features["backend_load_time"] = driver.execute_script(browser_scripts["TIME_BACKEND"])
-            collected_features["doc_height"] = driver.execute_script(browser_scripts["SCROLL_HEIGHT"])
-            collected_features["css_classes"] = driver.execute_script(browser_scripts["CSS_CLASSES"])
-            collected_features["listeners_interact"] = driver.execute_script(browser_scripts["EVENT_LISTENERS_INTERACT"])
-            collected_features["cookie_values"] = driver.get_cookies()  # Not a script
-            collected_features["dom_tree"] = driver.execute_script(browser_scripts["DOM_NODES"])
-            collected_features["html_tag_seq"] = driver.execute_script(browser_scripts["HTML_TAG_SEQUENCE"])
-        except Exception as e:
-            logger.warning(f"Failed executing scripts on browser! [Worker {process}]")
-            logger.warning(e)
-
     # Close the browser's URL tab
     try:
         # Close possible alerts
@@ -317,7 +301,6 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     else:
         # Insert data and clear storage before opening the next website
         manage_requests(db, process, domain, web_list, temp_folder, geo_db)
-        insert_browser_data(db, process, url, collected_features)
         links = parse_internal_links(url, webcode)
         try:
             storage.clear()
@@ -332,4 +315,37 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     if compressed_screenshot:
         domain.values["screenshot"] = compressed_screenshot
     domain.save()
+    if BROWSER_SCRIPTS_ENABLED:
+        try:
+            domain["frontend_load_time"] = driver.execute_script(browser_scripts["TIME_FRONTEND"])
+            domain["backend_load_time"] = driver.execute_script(browser_scripts["TIME_BACKEND"])
+            domain["doc_height"] = driver.execute_script(browser_scripts["SCROLL_HEIGHT"])
+            domain["css_classes"] = driver.execute_script(browser_scripts["CSS_CLASSES"])
+            domain["listeners_interact"] = driver.execute_script(browser_scripts["EVENT_LISTENERS_INTERACT"])
+            domain["cookie_values"] = driver.get_cookies()  # Not a script
+            domain["dom_tree_nodes"] = driver.execute_script(browser_scripts["DOM_NODES"])
+            #domain["html_tag_seq"] = driver.execute_script(browser_scripts["HTML_TAG_SEQUENCE"])
+        except Exception as e:
+            logger.warning(f"Failed executing scripts on browser! [Worker {process}]")
+            logger.warning(e)
+        else:
+            domain.save()
+        for cookie_json in driver.get_cookies():
+            cookie = Connector(db, "cookie")
+            if not cookie.load(hash_string(cookie_json["name"])):
+                cookie.values["name"] = cookie_json["name"]
+                if not cookie.save():
+                    # Wait until the other thread saves the URL inside the database (or 30s max)
+                    seconds = 5
+                    while not cookie.load(hash_string(cookie_json["name"])) and seconds > 0:
+                        seconds -= 1
+                        time.sleep(1)
+            domain.add(cookie, {"value": cookie_json["value"],
+                                "path": cookie_json["path"],
+                                "domain": cookie_json["domain"],
+                                "secure": cookie_json["secure"],
+                                "httpOnly": cookie_json["httpOnly"],
+                                "expiry": cookie_json["expiry"],
+                                "sameSite": cookie_json["sameSite"]})
+
     return driver, COMPLETED, NO_REPEAT, links
