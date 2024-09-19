@@ -322,7 +322,6 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
             domain.values["doc_height"] = driver.execute_script(browser_scripts["SCROLL_HEIGHT"])
             domain.values["css_classes"] = driver.execute_script(browser_scripts["CSS_CLASSES"])
             domain.values["listeners_interact"] = driver.execute_script(browser_scripts["EVENT_LISTENERS_INTERACT"])
-            domain.values["cookie_values"] = driver.get_cookies()  # Not a script
             domain.values["dom_tree_nodes"] = driver.execute_script(browser_scripts["DOM_NODES"])
             #domain["html_tag_seq"] = driver.execute_script(browser_scripts["HTML_TAG_SEQUENCE"])
         except Exception as e:
