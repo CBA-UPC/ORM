@@ -38,7 +38,7 @@ from selenium.webdriver.firefox.service import Service # Used to define geckodri
 # Own modules
 from utils import utc_now, extract_domain, hash_string
 from db_manager import Db, Connector
-from data_manager import manage_requests, parse_internal_links, insert_link, insert_browser_data
+from data_manager import manage_requests, parse_internal_links
 from session_storage import SessionStorage
 
 
