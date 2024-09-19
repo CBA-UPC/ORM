@@ -222,6 +222,14 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     # We collect again the URL after redirections
     original_url = url
     url = driver.current_url
+    script_values = {}
+    script_values["frontend_load_time"] = driver.execute_script(browser_scripts["TIME_FRONTEND"])
+    script_values["backend_load_time"] = driver.execute_script(browser_scripts["TIME_BACKEND"])
+    script_values["doc_height"] = driver.execute_script(browser_scripts["SCROLL_HEIGHT"])
+    script_values["css_classes"] = driver.execute_script(browser_scripts["CSS_CLASSES"])
+    script_values["listeners_interact"] = driver.execute_script(browser_scripts["EVENT_LISTENERS_INTERACT"])
+    script_values["dom_tree_nodes"] = driver.execute_script(browser_scripts["DOM_NODES"])
+    script_values["captured_logs"] = driver.execute_script(browser_scripts["CAPTURE_LOGS"])
     
     # Collect website code and screenshot
     os.makedirs(os.path.join(os.path.abspath("."), temp_folder), exist_ok=True)
@@ -317,12 +325,13 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     domain.save()
     if BROWSER_SCRIPTS_ENABLED:
         try:
-            domain.values["frontend_load_time"] = driver.execute_script(browser_scripts["TIME_FRONTEND"])
-            domain.values["backend_load_time"] = driver.execute_script(browser_scripts["TIME_BACKEND"])
-            domain.values["doc_height"] = driver.execute_script(browser_scripts["SCROLL_HEIGHT"])
-            domain.values["css_classes"] = driver.execute_script(browser_scripts["CSS_CLASSES"])
-            domain.values["listeners_interact"] = driver.execute_script(browser_scripts["EVENT_LISTENERS_INTERACT"])
-            domain.values["dom_tree_nodes"] = driver.execute_script(browser_scripts["DOM_NODES"])
+            domain.values["frontend_load_time"] = script_values["frontend_load_time"]
+            domain.values["backend_load_time"] = script_values["backend_load_time"]
+            domain.values["doc_height"] = script_values["doc_height"]
+            domain.values["css_classes"] = script_values["css_classes"]
+            domain.values["listeners_interact"] = script_values["listeners_interact"]
+            domain.values["dom_tree_nodes"] = script_values["dom_tree_nodes"]
+            print(script_values["captured_logs"])
             #domain["html_tag_seq"] = driver.execute_script(browser_scripts["HTML_TAG_SEQUENCE"])
         except Exception as e:
             logger.warning(f"Failed executing scripts on browser! [Worker {process}]")
