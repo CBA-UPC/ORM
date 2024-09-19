@@ -222,13 +222,36 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     # We collect again the URL after redirections
     original_url = url
     url = driver.current_url
-    script_values = {}
-    script_values["frontend_load_time"] = driver.execute_script(browser_scripts["TIME_FRONTEND"])
-    script_values["backend_load_time"] = driver.execute_script(browser_scripts["TIME_BACKEND"])
-    script_values["doc_height"] = driver.execute_script(browser_scripts["SCROLL_HEIGHT"])
-    script_values["css_classes"] = driver.execute_script(browser_scripts["CSS_CLASSES"])
-    script_values["listeners_interact"] = driver.execute_script(browser_scripts["EVENT_LISTENERS_INTERACT"])
-    script_values["dom_tree_nodes"] = driver.execute_script(browser_scripts["DOM_NODES"])
+    script_values = {"frontend_load_time": -1, 
+                     "backend_load_time": -1, 
+                     "doc_height": -1, 
+                     "css_classes": -1, 
+                     "listeners_interact": -1, 
+                     "dom_tree_nodes": -1}
+    try:
+        script_values["frontend_load_time"] = driver.execute_script(browser_scripts["TIME_FRONTEND"])
+    except Exception as e:
+        pass
+    try:
+        script_values["backend_load_time"] = driver.execute_script(browser_scripts["TIME_BACKEND"])
+    except Exception as e:
+        pass
+    try:
+        script_values["doc_height"] = driver.execute_script(browser_scripts["SCROLL_HEIGHT"])
+    except Exception as e:
+        pass
+    try:
+        script_values["css_classes"] = driver.execute_script(browser_scripts["CSS_CLASSES"])
+    except Exception as e:
+        pass
+    try:
+        script_values["listeners_interact"] = driver.execute_script(browser_scripts["EVENT_LISTENERS_INTERACT"])
+    except Exception as e:
+        pass
+    try:
+        script_values["dom_tree_nodes"] = driver.execute_script(browser_scripts["DOM_NODES"])
+    except Exception as e:
+        pass
     
     # Collect website code and screenshot
     os.makedirs(os.path.join(os.path.abspath("."), temp_folder), exist_ok=True)
