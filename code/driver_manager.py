@@ -206,7 +206,10 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
             error_str = str(e)[:stacktrace_start].replace('\n','')
         else:
             error_str = str(e)
-        logger.warning("WebDriverException (2) on %s / Error: %s (proc. %d)" % (domain.values["name"], error_str, process))
+        if re.search("dnsNotFound", error_str) or re.search("connectionError", error_str):
+            logger.warning("%s Unreachable (proc. %d)" % (domain.values["name"], process))
+        else:
+            logger.warning("WebDriverException (2) on %s / Error: %s (proc. %d)" % (domain.values["name"], error_str, process))
 
         driver = reset_browser(driver, process, cache, update_ublock)
         domain.values["update_timestamp"] = utc_now()
