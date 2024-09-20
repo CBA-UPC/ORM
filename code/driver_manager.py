@@ -180,7 +180,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
         driver = reset_browser(driver, process, cache, update_ublock)
         return driver, FAILED, REPEAT, links
 
-    logger.info('[Worker %d] URL: %s' % (process, url))
+    logger.info('[Worker %d] URL (%d): %s' % (process, domain.values["id"], url))
     # Load the website and wait some time inside it
     try:
         driver.get(url)
@@ -206,8 +206,8 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
             error_str = str(e)[:stacktrace_start].replace('\n','')
         else:
             error_str = str(e)
-        if re.search("dnsNotFound", error_str) or re.search("connectionFailure", error_str) or re.search("connectionError", error_str):
-            logger.warning("%s Unreachable (proc. %d)" % (domain.values["name"], process))
+        if re.search("dnsNotFound", error_str) or re.search("connectionFailure", error_str) or re.search("netError", error_str):
+            logger.warning("[Worker %d] Unreachable website: %s" % (process, domain.values["name"]))
         else:
             logger.warning("WebDriverException (2) on %s / Error: %s (proc. %d)" % (domain.values["name"], error_str, process))
 
