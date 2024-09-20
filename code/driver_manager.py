@@ -25,6 +25,7 @@ import time
 import logging.config
 import zlib
 import json
+import shutil
 
 # 3rd party modules
 from selenium import webdriver
@@ -139,7 +140,9 @@ def build_driver(cache, update_ublock, process):
                     driver.get(plugin.values["background"].replace("UUID", uuid))
         return driver
     except Exception as e:
+        profile_path = str(driver.capabilities['moz:profile'])
         driver.quit()
+        shutil.rmtree(profile_path, ignore_errors=True)
         logger.error("[Worker %d] Error creating driver: %s" % (process, str(e)))
         return FAILED
 
@@ -147,7 +150,9 @@ def build_driver(cache, update_ublock, process):
 def reset_browser(driver, process, cache, update_ublock):
     """ Reset the browser to the default state. """
 
+    profile_path = str(driver.capabilities['moz:profile'])
     driver.quit()
+    shutil.rmtree(profile_path, ignore_errors=True)
     driver = build_driver(cache, update_ublock, process)
     while not driver:
         driver = build_driver(cache, update_ublock, process)
