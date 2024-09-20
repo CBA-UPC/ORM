@@ -185,7 +185,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     try:
         driver.get(url)
     except TimeoutException:
-        logger.warning("Site %s timed out [Worker %d]" % (domain.values["name"], process))
+        logger.warning("[Worker %d] Site %s timed out" % (process, domain.values["name"]))
         driver.close()
         driver.switch_to.window(blocker_tab_handle)
         try:
@@ -206,10 +206,10 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
             error_str = str(e)[:stacktrace_start].replace('\n','')
         else:
             error_str = str(e)
-        if re.search("dnsNotFound", error_str) or re.search("connectionFailure", error_str) or re.search("netError", error_str):
+        if re.search("dnsnotfound", error_str.lower()) or re.search("connectionfailure", error_str.lower()) or re.search("neterror", error_str.lower()):
             logger.warning("[Worker %d] Unreachable website: %s" % (process, domain.values["name"]))
         else:
-            logger.warning("WebDriverException (2) on %s / Error: %s (proc. %d)" % (domain.values["name"], error_str, process))
+            logger.warning("[Worker %d] WebDriverException (2) on %s / Error: %s" % (process, domain.values["name"], error_str))
 
         driver = reset_browser(driver, process, cache, update_ublock)
         domain.values["update_timestamp"] = utc_now()
@@ -266,21 +266,21 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     try:
         webcode = driver.page_source
     except InvalidArgumentException as e:
-        logger.warning("InvalidArgumentException on %s / Error: %s [Worker %d]" % (domain.values["name"], str(e), process))
+        logger.warning("[Worker %d] InvalidArgumentException on %s / Error: %s" % (process, domain.values["name"], str(e)))
         driver = reset_browser(driver, process, cache, update_ublock)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
         return driver, FAILED, REPEAT, links
     except WebDriverException as e:
-        logger.warning("WebDriverException (3) on %s / Error: %s [Worker %d]" % (domain.values["name"], str(e), process))
+        logger.warning("[Worker %d] WebDriverException (3) on %s / Error: %s" % (process, domain.values["name"], str(e)))
         driver = reset_browser(driver, process, cache, update_ublock)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
         return driver, FAILED, REPEAT, links
     except Exception as e:
-        logger.error("%s [Worker %d]" % (str(e), process))
+        logger.error("[Worker %d] %s" % (process, str(e)))
         driver = reset_browser(driver, process, cache, update_ublock)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
@@ -316,7 +316,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
             driver.delete_all_cookies()
         driver.close()
     except WebDriverException as e:
-        logger.warning("WebDriverException (3) on %s / Error: %s [Worker %d]" % (domain.values["name"], str(e), process))
+        logger.warning("[Worker %d] WebDriverException (3) on %s / Error: %s" % (process, domain.values["name"], str(e)))
         driver = reset_browser(driver, process, cache, update_ublock)
         return driver, FAILED, REPEAT, links
 
@@ -324,7 +324,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
     try:
         driver.switch_to.window(blocker_tab_handle)
     except Exception as e:
-        logger.error("Error accessing uBlock tab: %s [Worker %d]" % (str(e), process))
+        logger.error("[Worker %d] Error accessing uBlock tab: %s" % (process, str(e)))
         driver = reset_browser(driver, process, cache, update_ublock)
         return driver, FAILED, REPEAT, links
     try:
@@ -363,7 +363,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
             domain.values["dom_tree_nodes"] = script_values["dom_tree_nodes"]
             #domain["html_tag_seq"] = driver.execute_script(browser_scripts["HTML_TAG_SEQUENCE"])
         except Exception as e:
-            logger.warning(f"Failed executing scripts on browser! [Worker {process}]")
+            logger.warning(f"[Worker {process}] Failed executing measurement scripts on browser!")
             logger.warning(e)
         else:
             domain.save()
