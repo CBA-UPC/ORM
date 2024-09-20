@@ -207,7 +207,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
         else:
             error_str = str(e)
         if re.search("dnsnotfound", error_str.lower()) or re.search("connectionfailure", error_str.lower()) or re.search("neterror", error_str.lower()):
-            logger.warning("[Worker %d] Unreachable website: %s" % (process, domain.values["name"]))
+            logger.warning("[Worker %d] Website unreachable: %s" % (process, domain.values["name"]))
         else:
             logger.warning("[Worker %d] WebDriverException (2) on %s / Error: %s" % (process, domain.values["name"], error_str))
 
