@@ -171,7 +171,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
         driver = reset_browser(driver, process, cache, update_ublock)
         return driver, FAILED, REPEAT, links
 
-    logger.info('[Worker %d] URL: %s' % (process, url))
+    logger.info('[Worker %d] URL (%d): %s' % (process, domain.values[id], url))
     # Load the website and wait some time inside it
     try:
         driver.get(url)
