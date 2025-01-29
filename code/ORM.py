@@ -302,8 +302,11 @@ if __name__ == '__main__':
                 except Exception as e:
                     logger.error("[Main process] Error killing process %d: %s)" % (process_dict[k]["pid"], str(e)))
 
-                # Remove the process' temporary folder
+                # Remove process temporary folder
                 shutil.rmtree(process_dict[k]["folder"], ignore_errors=True)
+
+                # Create new process temporary folder
+                os.makedirs(os.path.join(temp_folder, str(process), exist_ok=True)
                 
                 # Create new worker and launch it
                 logger.error("[Main Process] Respawning process %d" % int(k))
