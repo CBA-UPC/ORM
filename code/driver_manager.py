@@ -70,10 +70,10 @@ def get_extension_uuid(path, identifier):
     return uuid
 
 
-def build_driver(cache, update_ublock, process):
+def build_driver(cache, update_ublock, temp_folder, process):
     """ Creates the selenium driver to be used by the script and loads the corresponding plugin if needed. """
     try:
-        profile = FirefoxProfile()
+        profile = FirefoxProfile(os.path.join(temp_folder, "firefox_profile"))
         # Disable browser content protection measures
         profile.set_preference("dom.storage.default_quota", 51200)
         profile.set_preference("dom.storage.default_site_quota", 51200)
@@ -140,13 +140,13 @@ def build_driver(cache, update_ublock, process):
         return FAILED
 
 
-def reset_browser(driver, process, cache, update_ublock):
+def reset_browser(driver, process, cache, update_ublock, temp_folder):
     """ Reset the browser to the default state. """
 
     driver.quit()
-    driver = build_driver(cache, update_ublock, process)
+    driver = build_driver(cache, update_ublock, temp_folder, process)
     while not driver:
-        driver = build_driver(cache, update_ublock, process)
+        driver = build_driver(cache, update_ublock, temp_folder, process)
     driver.set_page_load_timeout(30)
     return driver
 
@@ -160,7 +160,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
         blocker_tab_handle = driver.current_window_handle
     except Exception as e:
         logger.error("Error saving uBlock tab: %s [Worker %d]" % (str(e), process))
-        driver = reset_browser(driver, process, cache, update_ublock)
+        driver = reset_browser(driver, process, cache, update_ublock, temp_folder)
         return driver, FAILED, REPEAT, links
     try:
         driver.execute_script('''window.open();''')
@@ -168,7 +168,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
         driver.switch_to.window(second_tab_handle)
     except WebDriverException as e:
         logger.error("WebDriverException (1) on %s / Error: %s [Worker %d]" % (domain.values["name"], str(e), process))
-        driver = reset_browser(driver, process, cache, update_ublock)
+        driver = reset_browser(driver, process, cache, update_ublock, temp_folder)
         return driver, FAILED, REPEAT, links
 
     logger.info('[Worker %d] URL (%d): %s' % (process, domain.values["id"], url))
@@ -184,10 +184,10 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
             storage.clear()
         except NoSuchWindowException as e:
             logger.error("[Worker %d] Error accessing the session storage: %s" % (process, str(e)))
-            driver = reset_browser(driver, process, cache, update_ublock)
+            driver = reset_browser(driver, process, cache, update_ublock, temp_folder)
         except WebDriverException as e:
             logger.error("[Worker %d] Error clearing session storage: %s" % (process, str(e)))
-            driver = reset_browser(driver, process, cache, update_ublock)
+            driver = reset_browser(driver, process, cache, update_ublock, temp_folder)
         return driver, FAILED, REPEAT, links
     except WebDriverException as e:
         # Remove Stacktrace for readability -- Most of the time this error is launched when visiting
@@ -199,14 +199,14 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
             error_str = str(e)
         logger.warning("WebDriverException (2) on %s / Error: %s (proc. %d)" % (domain.values["name"], error_str, process))
 
-        driver = reset_browser(driver, process, cache, update_ublock)
+        driver = reset_browser(driver, process, cache, update_ublock, temp_folder)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
         return driver, FAILED, NO_REPEAT, links
     except Exception as e:
         logger.error("%s [Worker %d]" % (str(e), process))
-        driver = reset_browser(driver, process, cache, update_ublock)
+        driver = reset_browser(driver, process, cache, update_ublock, temp_folder)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
@@ -225,21 +225,21 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
         webcode = driver.page_source
     except InvalidArgumentException as e:
         logger.warning("InvalidArgumentException on %s / Error: %s [Worker %d]" % (domain.values["name"], str(e), process))
-        driver = reset_browser(driver, process, cache, update_ublock)
+        driver = reset_browser(driver, process, cache, update_ublock, temp_folder)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
         return driver, FAILED, REPEAT, links
     except WebDriverException as e:
         logger.warning("WebDriverException (3) on %s / Error: %s [Worker %d]" % (domain.values["name"], str(e), process))
-        driver = reset_browser(driver, process, cache, update_ublock)
+        driver = reset_browser(driver, process, cache, update_ublock, temp_folder)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
         return driver, FAILED, REPEAT, links
     except Exception as e:
         logger.error("%s [Worker %d]" % (str(e), process))
-        driver = reset_browser(driver, process, cache, update_ublock)
+        driver = reset_browser(driver, process, cache, update_ublock, temp_folder)
         domain.values["update_timestamp"] = utc_now()
         domain.values["priority"] = 0
         domain.save()
@@ -275,7 +275,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
         driver.close()
     except WebDriverException as e:
         logger.warning("WebDriverException (3) on %s / Error: %s [Worker %d]" % (domain.values["name"], str(e), process))
-        driver = reset_browser(driver, process, cache, update_ublock)
+        driver = reset_browser(driver, process, cache, update_ublock, temp_folder)
         return driver, FAILED, REPEAT, links
 
     # Process traffic from uBlock Origin tab sessionStorage
@@ -283,7 +283,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
         driver.switch_to.window(blocker_tab_handle)
     except Exception as e:
         logger.error("Error accessing uBlock tab: %s [Worker %d]" % (str(e), process))
-        driver = reset_browser(driver, process, cache, update_ublock)
+        driver = reset_browser(driver, process, cache, update_ublock, temp_folder)
         return driver, FAILED, REPEAT, links
     try:
         storage = SessionStorage(driver)
@@ -292,7 +292,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
             web_list[key] = storage[key]
     except NoSuchWindowException as e:
         logger.error("[Worker %d] Error accessing the session storage: %s" % (process, str(e)))
-        driver = reset_browser(driver, process, cache, update_ublock)
+        driver = reset_browser(driver, process, cache, update_ublock, temp_folder)
         return driver, FAILED, REPEAT, links
     else:
         # Insert data and clear storage before opening the next website
@@ -302,7 +302,7 @@ def visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublo
             storage.clear()
         except WebDriverException as e:
             logger.error("[Worker %d] Error clearing session storage: %s" % (process, str(e)))
-            driver = reset_browser(driver, process, cache, update_ublock)
+            driver = reset_browser(driver, process, cache, update_ublock, temp_folder)
             return driver, FAILED, NO_REPEAT, links
         
     # Save the screenshot and update the db update timestamp
