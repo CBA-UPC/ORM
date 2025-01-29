@@ -84,7 +84,7 @@ def main(process):
             if re.search("empty", str(e)):
                 work_queue_lock.release()
                 my_dict = driver.capabilities
-                folder = os.path.join(temp_folder, "tmp-" + str(process)
+                folder = os.path.join(temp_folder, "tmp-" + str(process))
                 status_queue_lock.acquire()
                 status_queue.append([str(process), folder, "", os.getpid(), driver.service.process.pid, my_dict['moz:processID'], datetime.now()])
                 status_queue_lock.release()
