@@ -74,7 +74,7 @@ def build_driver(cache, update_ublock, temp_folder, process):
     """ Creates the selenium driver to be used by the script and loads the corresponding plugin if needed. """
     try:
         os.makedirs(os.path.join(temp_folder, "firefox_profile"), exist_ok=True)
-        profile = FirefoxProfile(os.path.join(temp_folder, "firefox_profile"))
+        profile = FirefoxProfile()
         # Disable browser content protection measures
         profile.set_preference("dom.storage.default_quota", 51200)
         profile.set_preference("dom.storage.default_site_quota", 51200)
@@ -97,7 +97,8 @@ def build_driver(cache, update_ublock, temp_folder, process):
         opts.binary_location = firefox_path
         
         geckodriver_service = Service(executable_path=geckodriver_path,
-                                      log_path="log/geckodriver.log")
+                                      log_path="log/geckodriver.log",
+                                      service_args=['--profile-root', os.path.join(temp_folder, "firefox_profile")])
         
         driver = webdriver.Firefox(service=geckodriver_service,
                                    options=opts)
