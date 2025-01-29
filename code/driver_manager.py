@@ -73,6 +73,7 @@ def get_extension_uuid(path, identifier):
 def build_driver(cache, update_ublock, temp_folder, process):
     """ Creates the selenium driver to be used by the script and loads the corresponding plugin if needed. """
     try:
+        os.makedirs(os.path.join(temp_folder, "firefox_profile"), exist_ok=True)
         profile = FirefoxProfile(os.path.join(temp_folder, "firefox_profile"))
         # Disable browser content protection measures
         profile.set_preference("dom.storage.default_quota", 51200)
