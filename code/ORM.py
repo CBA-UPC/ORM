@@ -306,7 +306,7 @@ if __name__ == '__main__':
                 shutil.rmtree(process_dict[k]["folder"], ignore_errors=True)
 
                 # Create new process temporary folder
-                os.makedirs(os.path.join(temp_folder, str(process), exist_ok=True)
+                os.makedirs(os.path.join(temp_folder, str(process)), exist_ok=True)
                 
                 # Create new worker and launch it
                 logger.error("[Main Process] Respawning process %d" % int(k))
