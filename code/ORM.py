@@ -62,10 +62,12 @@ def main(process):
     # Load geolocation database
     geo_db = geolocation.Reader(config.GEOCITY_FILE_PATH)
 
+    folder = os.path.join(temp_folder, "tmp-" + str(process))
+    
     # Load the selenium driver with proper plugins
-    driver = build_driver(cache, update_ublock, process)
+    driver = build_driver(cache, update_ublock, folder, process)
     while not driver:
-        driver = build_driver(cache, update_ublock, process)
+        driver = build_driver(cache, update_ublock, folder, process)
     driver.set_page_load_timeout(30)
 
     if not driver:
@@ -84,7 +86,6 @@ def main(process):
             if re.search("empty", str(e)):
                 work_queue_lock.release()
                 my_dict = driver.capabilities
-                folder = os.path.join(temp_folder, "tmp-" + str(process))
                 status_queue_lock.acquire()
                 status_queue.append([str(process), folder, "", os.getpid(), driver.service.process.pid, my_dict['moz:processID'], datetime.now()])
                 status_queue_lock.release()
@@ -93,7 +94,6 @@ def main(process):
                 logger.error("[Worker %d] %s" % (process, str(e)))
         else:
             my_dict = driver.capabilities
-            folder = os.path.join(temp_folder, "tmp-" + str(process))
             status_queue_lock.acquire()
             status_queue.append([str(process), folder, url, os.getpid(), driver.service.process.pid, my_dict['moz:processID'], datetime.now()])
             status_queue_lock.release()
