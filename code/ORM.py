@@ -21,6 +21,7 @@
 # Basic modules
 import argparse
 import os
+import shutil
 import re
 import time
 import logging.config
@@ -82,17 +83,19 @@ def main(process):
         except Exception as e:
             if re.search("empty", str(e)):
                 work_queue_lock.release()
-                my_dict = driver.capabilities 
+                my_dict = driver.capabilities
+                folder = os.path.join(temp_folder, "tmp-" + str(process)
                 status_queue_lock.acquire()
-                status_queue.append([str(process), "", os.getpid(), driver.service.process.pid, my_dict['moz:processID'], datetime.now()])
+                status_queue.append([str(process), folder, "", os.getpid(), driver.service.process.pid, my_dict['moz:processID'], datetime.now()])
                 status_queue_lock.release()
                 time.sleep(10)
             else:
                 logger.error("[Worker %d] %s" % (process, str(e)))
         else:
-            my_dict = driver.capabilities 
+            my_dict = driver.capabilities
+            folder = os.path.join(temp_folder, "tmp-" + str(process)
             status_queue_lock.acquire()
-            status_queue.append([str(process), url, os.getpid(), driver.service.process.pid, my_dict['moz:processID'], datetime.now()])
+            status_queue.append([str(process), folder, url, os.getpid(), driver.service.process.pid, my_dict['moz:processID'], datetime.now()])
             status_queue_lock.release()
             domain = Connector(db, "domain")
             domain.load(int(site))
@@ -103,7 +106,7 @@ def main(process):
             repeat = True
             while extra_tries > 0 and not completed and repeat:
                 extra_tries -= 1
-                driver, completed, repeat, links = visit_site(db, process, driver, domain, url, temp_folder, cache, update_ublock, geo_db)
+                driver, completed, repeat, links = visit_site(db, process, driver, domain, url, folder, cache, update_ublock, geo_db)
             if completed:
                 if parent:
                     insert_link(db, parent, url)
@@ -202,6 +205,7 @@ if __name__ == '__main__':
     for i in range(processes):
         process =  Process(target=main, args=[i])
         process_dict[str(i)] = {"process": process, 
+                                "folder": os.path.join(temp_folder, "tmp-" + str(process)),
                                 "url": "", 
                                 "pid": -1, 
                                 "geckodriver_pid": -1, 
@@ -263,10 +267,11 @@ if __name__ == '__main__':
         while True:
             try:
                 process_status = status_queue.pop()
-                process_dict[process_status[0]]["url"] = process_status[1]
-                process_dict[process_status[0]]["pid"] = process_status[2]
-                process_dict[process_status[0]]["geckodriver_pid"] = process_status[3]
-                process_dict[process_status[0]]["browser_pid"] = process_status[4]
+                process_dict[process_status[0]]["folder"] = process_status[1]
+                process_dict[process_status[0]]["url"] = process_status[2]
+                process_dict[process_status[0]]["pid"] = process_status[3]
+                process_dict[process_status[0]]["geckodriver_pid"] = process_status[4]
+                process_dict[process_status[0]]["browser_pid"] = process_status[5]
                 process_dict[process_status[0]]["last_message"] = process_status[-1]
             except Exception as e:
                 if re.search("empty", str(e)):
@@ -297,10 +302,14 @@ if __name__ == '__main__':
                 except Exception as e:
                     logger.error("[Main process] Error killing process %d: %s)" % (process_dict[k]["pid"], str(e)))
 
+                # Remove the process' temporary folder
+                shutil.rmtree(process_dict[k]["folder"], ignore_errors=True)
+                
                 # Create new worker and launch it
                 logger.error("[Main Process] Respawning process %d" % int(k))
                 process = Process(target=main, args=[int(k)])
                 process_dict[k] = {"process": process, 
+                                   "folder": os.path.join(temp_folder, str(process)),
                                    "url": "",
                                    "pid": -1, 
                                    "geckodriver_pid": -1, 
