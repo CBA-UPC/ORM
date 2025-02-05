@@ -363,10 +363,14 @@ def db_work(process_number):
                     if not ast.load(item["ast"]["hash"]):
                         ast.values.pop("dirt_level")
                         ast.values.pop("popularity_level")
+                        ast.values.pop("insert_date")
+                        ast.values.pop("update_timestamp")
                         ast.values["tree_nodes"] = item["ast"]["tree_nodes"]
                         while not ast.save():
                             ast.load(item["ast"]["hash"])
                             ast.values.pop("dirt_level")
+                            ast.values.pop("insert_date")
+                            ast.values.pop("update_timestamp")
                             ast.values.pop("popularity_level")
                     resource.add(ast, {"offset": item["offset"], "length": item["length"]})
             except Exception as error:
